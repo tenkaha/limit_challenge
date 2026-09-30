@@ -2,7 +2,7 @@
 
 import { Alert, Box, Button, CircularProgress, Typography } from '@mui/material';
 import type { ReactNode } from 'react';
-import { errorMessage } from '@/lib/errors';
+import { errorMessage, isRetryable } from '@/lib/errors';
 
 interface QueryStateProps {
   isPending: boolean;
@@ -34,9 +34,11 @@ export default function QueryState({
       <Alert
         severity="error"
         action={
-          <Button color="inherit" size="small" onClick={onRetry}>
-            Retry
-          </Button>
+          isRetryable(error) ? (
+            <Button color="inherit" size="small" onClick={onRetry}>
+              Retry
+            </Button>
+          ) : null
         }
       >
         {errorMessage(error)}

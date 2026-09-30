@@ -21,8 +21,17 @@ export function errorMessage(error: unknown): string {
   const data: unknown = error.response.data;
   if (typeof data === 'object' && data !== null) {
     if ('detail' in data && typeof data.detail === 'string') return data.detail;
-    const { non_field_errors: nonField } = fieldErrors(error);
-    if (nonField) return nonField;
+    const errors = fieldErrors(error);
+    if (errors.non_field_errors) return errors.non_field_errors;
+    const [first] = Object.values(errors);
+    if (first) return first;
   }
   return `Request failed (${error.response.status}).`;
+}
+
+// Network failures and 5xx may succeed on retry; a 4xx will fail the same way again.
+export function isRetryable(error: unknown): boolean {
+  if (!isAxiosError(error)) return true;
+  const status = error.response?.status;
+  return status === undefined || status >= 500;
 }
