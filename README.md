@@ -69,7 +69,7 @@ Invalid input returns `400` with errors keyed by field. Deleting an office with 
 ## Assumptions
 
 - A VIN has 17 characters, uppercase letters and digits, without I, O or Q. The API trims and uppercases it.
-- The API stores plates as A–Z and 0–9 only, so `abc-12 34` becomes `ABC1234`.
+- The API stores plates as uppercase letters and digits only, so `abc-12 34` becomes `ABC1234`.
 - Two active vehicles can't share a plate. An inactive vehicle can keep a plate an active one now uses, but can't be reactivated while it's taken.
 - Office names are unique per city.
 - A vehicle's year is between 1886 and next year. Maintenance dates can't be in the future.
