@@ -1,3 +1,4 @@
+import { AppRouterCacheProvider } from '@mui/material-nextjs/v16-appRouter';
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import NavBar from '@/components/nav-bar';
@@ -27,10 +28,13 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
-        <Providers>
-          <NavBar />
-          <main className="mx-auto w-full max-w-6xl px-4 py-8">{children}</main>
-        </Providers>
+        {/* Collects emotion styles during SSR so server and client markup match. */}
+        <AppRouterCacheProvider options={{ enableCssLayer: true }}>
+          <Providers>
+            <NavBar />
+            <main className="mx-auto w-full max-w-6xl px-4 py-8">{children}</main>
+          </Providers>
+        </AppRouterCacheProvider>
       </body>
     </html>
   );
