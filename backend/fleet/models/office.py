@@ -13,8 +13,7 @@ class Office(TimeStampedModel):
         ordering = ("name", "city")
         constraints = (
             models.UniqueConstraint(
-                "name",
-                "city",
+                fields=("name", "city"),
                 name="uniq_office_name_city",
                 violation_error_message="An office with this name already exists in this city.",
             ),
