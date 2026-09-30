@@ -3,39 +3,53 @@
 import {
   Box,
   Button,
-  Card,
-  CardContent,
-  Chip,
+  Divider,
   IconButton,
-  Snackbar,
+  Paper,
   Stack,
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   Typography,
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { useParams } from 'next/navigation';
 import { useState } from 'react';
+import { colors, fonts } from '@/app/theme';
 import ConfirmDialog from '@/components/confirm-dialog';
 import QueryState from '@/components/query-state';
+import StatusDot from '@/components/status-dot';
+import { useToast } from '@/components/toast';
 import { api } from '@/lib/api';
-import { vehiclesListHref } from '@/lib/last-search';
+import { errorMessage } from '@/lib/errors';
 import { formatDate, formatMoney } from '@/lib/format';
 import { MAINTENANCE_TYPES, type MaintenanceHistoryItem } from '@/lib/types';
 import AssignOffice from './assign-office';
+import BackLink from './back-link';
 import RecordDialog from './record-dialog';
 
 type Editing = { record: MaintenanceHistoryItem | null } | null;
 
+function Figure({ label, value }: { label: string; value: string }) {
+  return (
+    <Box display="flex" flexDirection="column" gap={0.25}>
+      <Typography fontSize={12} color="text.secondary">
+        {label}
+      </Typography>
+      <Typography fontSize={20} fontWeight={600} sx={{ fontVariantNumeric: 'tabular-nums' }}>
+        {value}
+      </Typography>
+    </Box>
+  );
+}
+
 export default function VehicleDetailPage() {
   const vehicleId = Number(useParams<{ id: string }>().id);
-  const router = useRouter();
   const queryClient = useQueryClient();
+  const toast = useToast();
   const vehicle = useQuery({
     queryKey: ['vehicle', vehicleId],
     queryFn: () => api.vehicles.detail(vehicleId),
@@ -43,35 +57,30 @@ export default function VehicleDetailPage() {
   });
   const [editing, setEditing] = useState<Editing>(null);
   const [deleting, setDeleting] = useState<MaintenanceHistoryItem | null>(null);
-  const [moved, setMoved] = useState(false);
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['vehicle', vehicleId] });
   const remove = useMutation({
     mutationFn: (id: number) => api.records.remove(id),
     onSuccess: async () => {
       setDeleting(null);
+      toast.success('Record deleted');
       await refresh();
+    },
+    onError: (error) => {
+      setDeleting(null);
+      toast.error("Can't delete record", errorMessage(error));
     },
   });
 
   const data = vehicle.data;
   const records = data?.maintenance_records ?? [];
+  // Derived from the embedded history (newest first), so no extra request.
+  const totalSpent = records.reduce((sum, record) => sum + record.cost, 0);
+  const lastService = records[0]?.performed_on ?? null;
 
   return (
-    <Stack spacing={3}>
-      <Box>
-        <Button
-          component={Link}
-          href="/vehicles"
-          size="small"
-          onClick={(event) => {
-            event.preventDefault();
-            router.push(vehiclesListHref());
-          }}
-        >
-          ← Back to vehicles
-        </Button>
-      </Box>
+    <Stack spacing={2.5}>
+      <BackLink />
       <QueryState
         isPending={vehicle.isPending}
         error={vehicle.error}
@@ -79,108 +88,170 @@ export default function VehicleDetailPage() {
       >
         {data ? (
           <>
-            <Card variant="outlined">
-              <CardContent>
-                <Stack spacing={2}>
-                  <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
-                    <Typography variant="h4" component="h1" fontWeight={700}>
-                      {data.year} {data.make} {data.model}
-                    </Typography>
-                    <Chip
-                      label={data.is_active ? 'Active' : 'Inactive'}
-                      color={data.is_active ? 'success' : 'default'}
-                      size="small"
-                    />
-                  </Stack>
-                  <Typography color="text.secondary">
-                    Plate <strong>{data.license_plate}</strong> · VIN{' '}
-                    <Box component="span" fontFamily="monospace">
-                      {data.vin}
-                    </Box>
+            <Box
+              display="grid"
+              gridTemplateColumns={{ xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' }}
+              gap={2}
+            >
+              <Paper
+                variant="outlined"
+                sx={{
+                  gridColumn: { md: 'span 2' },
+                  p: 3,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 1.5,
+                }}
+              >
+                <Stack direction="row" spacing={1.5} alignItems="center">
+                  <Typography
+                    component="h1"
+                    sx={{
+                      fontFamily: fonts.mono,
+                      fontSize: 30,
+                      fontWeight: 500,
+                      letterSpacing: '0.02em',
+                    }}
+                  >
+                    {data.license_plate}
                   </Typography>
-                  <Typography>
-                    Office: {data.office.name} ({data.office.city})
-                  </Typography>
-                  <AssignOffice
-                    key={data.office.id}
-                    vehicleId={vehicleId}
-                    office={data.office}
-                    onMoved={() => setMoved(true)}
+                  <Box
+                    sx={{
+                      bgcolor: data.is_active ? '#ECFDF3' : colors.rowDivider,
+                      borderRadius: 999,
+                      px: 1.25,
+                      py: 0.5,
+                    }}
+                  >
+                    <StatusDot active={data.is_active} />
+                  </Box>
+                </Stack>
+                <Typography fontSize={18} color={colors.inkSoft}>
+                  {data.year} {data.make} {data.model}
+                </Typography>
+                <Typography sx={{ fontFamily: fonts.mono, fontSize: 13, color: colors.subtle }}>
+                  VIN {data.vin}
+                </Typography>
+                <Divider sx={{ mt: 1, borderColor: colors.rowDivider }} />
+                <Stack direction="row" spacing={4} pt={0.5} flexWrap="wrap" useFlexGap>
+                  <Figure label="Records" value={String(records.length)} />
+                  <Figure label="Total spent" value={formatMoney(totalSpent)} />
+                  <Figure
+                    label="Last service"
+                    value={lastService ? formatDate(lastService) : 'No service yet'}
                   />
                 </Stack>
-              </CardContent>
-            </Card>
+              </Paper>
+              <AssignOffice key={data.office.id} vehicleId={vehicleId} office={data.office} />
+            </Box>
 
-            <Stack direction="row" justifyContent="space-between" alignItems="center">
-              <Typography variant="h5" component="h2">
-                Maintenance history ({records.length})
-              </Typography>
-              <Button variant="contained" onClick={() => setEditing({ record: null })}>
-                Add record
-              </Button>
-            </Stack>
-
-            <QueryState
-              isPending={false}
-              error={null}
-              onRetry={refresh}
-              isEmpty={records.length === 0}
-              emptyMessage="No maintenance recorded for this vehicle yet."
+            <Paper
+              variant="outlined"
+              component="section"
+              aria-label="Maintenance history"
+              sx={{ overflow: 'hidden' }}
             >
-              <TableContainer component={Card} variant="outlined">
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Date</TableCell>
-                      <TableCell>Type</TableCell>
-                      <TableCell>Mechanic</TableCell>
-                      <TableCell align="right">Cost</TableCell>
-                      <TableCell>Notes</TableCell>
-                      <TableCell align="right">Actions</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {records.map((record) => (
-                      <TableRow key={record.id} hover>
-                        <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                          {formatDate(record.performed_on)}
-                        </TableCell>
-                        <TableCell>{MAINTENANCE_TYPES[record.maintenance_type]}</TableCell>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" p={2}>
+                <Typography variant="h2">Maintenance history</Typography>
+                <Button
+                  variant="contained"
+                  startIcon={<Plus size={16} />}
+                  onClick={() => setEditing({ record: null })}
+                >
+                  Add record
+                </Button>
+              </Stack>
+              {records.length === 0 ? (
+                <Typography
+                  color="text.secondary"
+                  textAlign="center"
+                  py={6}
+                  borderTop={1}
+                  borderColor="divider"
+                >
+                  No maintenance recorded for this vehicle yet.
+                </Typography>
+              ) : (
+                <>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Date</TableCell>
+                        <TableCell>Type</TableCell>
+                        <TableCell>Mechanic</TableCell>
+                        <TableCell align="right">Cost</TableCell>
+                        <TableCell>Notes</TableCell>
                         <TableCell>
-                          {record.mechanic.name}
-                          <Typography variant="caption" display="block" color="text.secondary">
-                            {record.mechanic.certification_number}
-                          </Typography>
-                        </TableCell>
-                        <TableCell align="right">{formatMoney(record.cost)}</TableCell>
-                        <TableCell sx={{ whiteSpace: 'pre-line', maxWidth: 280 }}>
-                          {record.notes}
-                        </TableCell>
-                        <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
-                          <IconButton
-                            size="small"
-                            aria-label={`Edit record from ${record.performed_on}`}
-                            onClick={() => setEditing({ record })}
-                          >
-                            ✎
-                          </IconButton>
-                          <IconButton
-                            size="small"
-                            aria-label={`Delete record from ${record.performed_on}`}
-                            onClick={() => {
-                              remove.reset();
-                              setDeleting(record);
-                            }}
-                          >
-                            ✕
-                          </IconButton>
+                          <Box component="span" sx={{ position: 'absolute', left: -9999 }}>
+                            Actions
+                          </Box>
                         </TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </QueryState>
+                    </TableHead>
+                    <TableBody>
+                      {records.map((record) => (
+                        <TableRow key={record.id} hover sx={{ verticalAlign: 'top' }}>
+                          <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                            {formatDate(record.performed_on)}
+                          </TableCell>
+                          <TableCell>
+                            <Box
+                              component="span"
+                              sx={{
+                                fontSize: 13,
+                                bgcolor: colors.rowDivider,
+                                color: colors.inkSoft,
+                                borderRadius: 1.5,
+                                px: 1,
+                                py: 0.375,
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {MAINTENANCE_TYPES[record.maintenance_type]}
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <div>{record.mechanic.name}</div>
+                            <Box
+                              sx={{ fontFamily: fonts.mono, fontSize: 12, color: colors.subtle }}
+                            >
+                              {record.mechanic.certification_number}
+                            </Box>
+                          </TableCell>
+                          <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                            {formatMoney(record.cost)}
+                          </TableCell>
+                          <TableCell
+                            sx={{ whiteSpace: 'pre-line', maxWidth: 280, color: 'text.secondary' }}
+                          >
+                            {record.notes || '—'}
+                          </TableCell>
+                          <TableCell align="right" sx={{ whiteSpace: 'nowrap', py: 1 }}>
+                            <IconButton
+                              aria-label={`Edit record from ${record.performed_on}`}
+                              onClick={() => setEditing({ record })}
+                              sx={{ color: 'text.secondary' }}
+                            >
+                              <Pencil size={18} />
+                            </IconButton>
+                            <IconButton
+                              aria-label={`Delete record from ${record.performed_on}`}
+                              onClick={() => setDeleting(record)}
+                              sx={{ color: 'text.secondary' }}
+                            >
+                              <Trash2 size={18} />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <Typography fontSize={13} color={colors.subtle} px={2} py={1.5}>
+                    Newest first · all {records.length} records
+                  </Typography>
+                </>
+              )}
+            </Paper>
           </>
         ) : null}
       </QueryState>
@@ -197,12 +268,6 @@ export default function VehicleDetailPage() {
           }}
         />
       ) : null}
-      <Snackbar
-        open={moved}
-        autoHideDuration={3000}
-        onClose={() => setMoved(false)}
-        message="Vehicle moved."
-      />
       <ConfirmDialog
         open={deleting !== null}
         title="Delete maintenance record?"
@@ -212,7 +277,7 @@ export default function VehicleDetailPage() {
             : ''
         }
         isPending={remove.isPending}
-        error={remove.error}
+        error={null}
         onConfirm={() => deleting && remove.mutate(deleting.id)}
         onClose={() => setDeleting(null)}
       />

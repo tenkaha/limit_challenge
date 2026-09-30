@@ -1,8 +1,9 @@
 'use client';
 
-import { Alert, Button, MenuItem, Stack, TextField } from '@mui/material';
+import { Box, Button, MenuItem, Paper, TextField, Typography } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { useToast } from '@/components/toast';
 import { api } from '@/lib/api';
 import { errorMessage } from '@/lib/errors';
 import type { Id, Office } from '@/lib/types';
@@ -10,37 +11,53 @@ import type { Id, Office } from '@/lib/types';
 interface AssignOfficeProps {
   vehicleId: Id;
   office: Office;
-  onMoved: () => void;
 }
 
-// The parent remounts this on office change (key), so success feedback lives in the parent.
-export default function AssignOffice({ vehicleId, office, onMoved }: AssignOfficeProps) {
+// Keyed by office id in the parent, so the select resets after a move.
+export default function AssignOffice({ vehicleId, office }: AssignOfficeProps) {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const offices = useQuery({ queryKey: ['offices'], queryFn: api.offices.list });
   const [target, setTarget] = useState(String(office.id));
 
   const assign = useMutation({
     mutationFn: () => api.vehicles.assign(vehicleId, Number(target)),
     onSuccess: async () => {
-      onMoved();
+      const moved = offices.data?.results.find((option) => String(option.id) === target);
+      toast.success('Vehicle moved', moved ? `Now at ${moved.name}` : undefined);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['vehicle', vehicleId] }),
         queryClient.invalidateQueries({ queryKey: ['vehicles'] }),
       ]);
     },
+    onError: (error) => toast.error("Couldn't move vehicle", errorMessage(error)),
   });
 
   return (
-    <Stack spacing={1}>
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ sm: 'center' }}>
+    <Paper
+      variant="outlined"
+      sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 1.5, height: '100%' }}
+    >
+      <Typography fontSize={12} color="text.secondary">
+        Office
+      </Typography>
+      <Box>
+        <Typography fontSize={16} fontWeight={500}>
+          {office.name}
+        </Typography>
+        <Typography fontSize={14} color="text.secondary">
+          {office.city}
+        </Typography>
+      </Box>
+      <Box mt="auto" display="flex" flexDirection="column" gap={1.5}>
         <TextField
           select
           size="small"
-          label="Office"
+          label="Move to"
           value={target}
           onChange={(event) => setTarget(event.target.value)}
           disabled={offices.isPending}
-          sx={{ minWidth: 260 }}
+          fullWidth
         >
           {(offices.data?.results ?? [office]).map((option) => (
             <MenuItem key={option.id} value={String(option.id)}>
@@ -50,14 +67,15 @@ export default function AssignOffice({ vehicleId, office, onMoved }: AssignOffic
         </TextField>
         <Button
           variant="outlined"
+          color="inherit"
           onClick={() => assign.mutate()}
           loading={assign.isPending}
           disabled={target === String(office.id)}
+          sx={{ borderColor: 'divider' }}
         >
-          Move to office
+          Move vehicle
         </Button>
-      </Stack>
-      {assign.error ? <Alert severity="error">{errorMessage(assign.error)}</Alert> : null}
-    </Stack>
+      </Box>
+    </Paper>
   );
 }
