@@ -1,18 +1,20 @@
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v16-appRouter';
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { IBM_Plex_Mono, IBM_Plex_Sans } from 'next/font/google';
 import NavBar from '@/components/nav-bar';
 import Providers from './providers';
 import './globals.css';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+const plexSans = IBM_Plex_Sans({
+  variable: '--font-plex-sans',
   subsets: ['latin'],
+  weight: ['400', '500', '600'],
 });
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
+const plexMono = IBM_Plex_Mono({
+  variable: '--font-plex-mono',
   subsets: ['latin'],
+  weight: ['400', '500'],
 });
 
 export const metadata: Metadata = {
@@ -26,13 +28,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+    <html lang="en" className={`${plexSans.variable} ${plexMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
         {/* Collects emotion styles during SSR so server and client markup match. */}
         <AppRouterCacheProvider options={{ enableCssLayer: true }}>
           <Providers>
             <NavBar />
-            <main className="mx-auto w-full max-w-6xl px-4 py-8">{children}</main>
+            <main className="mx-auto w-full max-w-[1180px] px-8 py-8">{children}</main>
           </Providers>
         </AppRouterCacheProvider>
       </body>
