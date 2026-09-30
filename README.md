@@ -1,10 +1,8 @@
 # Fleet Maintenance API
 
-REST API for a fleet of vehicles, the offices they belong to, the mechanics who service them and their maintenance history. Built with Django 5.2 and Django REST Framework.
+A Django REST Framework API for offices, vehicles, mechanics and maintenance records. The original brief is in [CHALLENGE.md](CHALLENGE.md).
 
-The original brief is in [CHALLENGE.md](CHALLENGE.md).
-
-## Running the project
+## Run
 
 Requires Python 3.13.
 
@@ -13,165 +11,84 @@ cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 python manage.py migrate
-python manage.py seed          # optional: realistic sample data, see below
+python manage.py seed
 python manage.py runserver 0.0.0.0:8000
 ```
 
-The API is at `http://localhost:8000/api/` (JSON by default, and browsable in a web browser). The Django admin is at `/admin/` (`python manage.py createsuperuser` first).
+The API lives at `http://localhost:8000/api/`.
 
-### Sample data
+`seed` creates 13 offices, 42 mechanics, 605 vehicles and about 61,000 maintenance records in roughly 4 seconds. The data is the same on every run (`--seed 42`). It refuses to run over existing data unless you pass `--flush`. Five vehicles have 800 records each, to exercise the vehicle details endpoint. It also adds these edge cases:
 
-```bash
-python manage.py seed
-# Seeded 13 offices, 42 mechanics, 605 vehicles, 61330 maintenance records in 4.2s.
-```
-
-- Uses Faker for names, cities and plates, with a fixed seed (`--seed 42`), so everyone gets the same data.
-- Large on purpose: up to 200 records per vehicle, plus 5 vehicles with 800 records each, to exercise the vehicle details endpoint.
-- Refuses to run if fleet data already exists; `--flush` replaces it.
-- Sizes are adjustable: `--offices`, `--mechanics`, `--vehicles`, `--max-records`, `--heavy-vehicles`, `--heavy-records`.
-
-On top of the random data it always creates these edge cases, useful when trying the reports by hand:
-
-| Data | What it shows |
+| Data | Expected result |
 |---|---|
-| Vehicle `NEVER1` | never serviced: first in needing-maintenance |
-| Vehicles `DUE365` / `DUE366` | last serviced exactly 365 / 366 days ago: only `DUE366` needs maintenance |
-| Two vehicles with plate `REUSE1`, one inactive | inactive vehicles may reuse an active vehicle's plate |
-| Mechanic `Idle Ivy` (active, no work) and `Retired Rex` (inactive, worked this year) | who appears in the workload report |
-| Office `Empty Lot` | summary row for an office with no vehicles |
+| Vehicle `NEVER1` | first in needing-maintenance |
+| Vehicles `DUE365`, `DUE366` | only `DUE366` needs maintenance |
+| Plate `REUSE1` on an inactive and an active vehicle | allowed |
+| Mechanics `Idle Ivy` (active, no work) and `Retired Rex` (inactive, worked this year) | both appear in the workload |
+| Office `Empty Lot` | 0 vehicles, 0 cost, no last maintenance |
 
-## Running the tests
+## Test
 
 ```bash
 cd backend
 python manage.py test
 ```
 
-Tests need only the runtime requirements. For coverage and the rest of the development tooling:
+The tests need only `requirements.txt`. For the dev tooling, install `requirements-dev.txt` and run:
 
 ```bash
-pip install -r requirements-dev.txt
-coverage run manage.py test && coverage report    # fails below 90% branch coverage
-ruff format --check . && ruff check .              # lint (every ruff rule enabled)
-mypy .                                             # strict type checking with django-stubs
+coverage run manage.py test && coverage report   # fails below 90%
+ruff format --check . && ruff check .
+mypy .
 ```
 
-The same checks run in GitHub Actions on every pull request, and `main` only accepts merges when they pass. [lefthook](https://github.com/evilmartians/lefthook) (`lefthook install` from the repo root) runs ruff on commit and mypy plus tests on push.
+CI runs these checks on every pull request, and `main` rejects merges that fail them. `lefthook install` adds the same checks as git hooks.
 
 ## API
 
-All endpoints are under `/api/`. List endpoints are paginated (`?page=`, `?page_size=` up to 100) and accept `?ordering=` on the listed fields.
+List endpoints accept `?page=`, `?page_size=` (max 100) and `?ordering=`.
 
-### CRUD
+| Endpoint | Purpose |
+|---|---|
+| `/api/offices/`, `/api/vehicles/`, `/api/mechanics/`, `/api/maintenance-records/` | CRUD |
+| `GET /api/offices/summary/` | active vehicles, 12-month cost and last maintenance per office |
+| `GET /api/vehicles/?office=&is_active=&make=&model=&maintenance_from=&maintenance_to=&mechanic_certification=` | vehicle search |
+| `GET /api/vehicles/{id}/` | vehicle with office and full maintenance history |
+| `GET /api/vehicles/{id}/maintenance/` | history, newest first, paginated |
+| `POST /api/vehicles/{id}/assign/` `{"office": id}` | move a vehicle to another office |
+| `GET /api/mechanics/workload/` | this year's jobs and cost per mechanic, busiest first |
+| `GET /api/vehicles/needing-maintenance/` | active vehicles never serviced or last serviced over 365 days ago |
+| `GET /api/vehicles/duplicate-check/?vin=&license_plate=&exclude=` | `{"conflicts": ["vin", "license_plate"]}` |
 
-| Resource | Endpoint | List filters and ordering |
-|---|---|---|
-| Offices | `/api/offices/` | `ordering`: `name`, `city` |
-| Vehicles | `/api/vehicles/` | search filters below; `ordering`: `vin`, `license_plate`, `make`, `model`, `year` |
-| Mechanics | `/api/mechanics/` | `is_active`; `ordering`: `name`, `certification_number` |
-| Maintenance records | `/api/maintenance-records/` | `ordering`: `performed_on`, `cost` |
-
-Each supports `GET` (list and detail), `POST`, `PUT`, `PATCH` and `DELETE`.
-
-### Reports and actions
-
-| # | Endpoint | Description |
-|---|---|---|
-| 2 | `GET /api/offices/summary/` | every office with active vehicle count, maintenance cost over the last 12 months, and last maintenance date |
-| 3 | `GET /api/vehicles/?office=&is_active=&make=&model=&maintenance_from=&maintenance_to=&mechanic_certification=` | vehicle search; any combination of filters |
-| 4 | `GET /api/vehicles/{id}/` | vehicle with its office and complete maintenance history, including each record's mechanic |
-| 5 | `GET /api/vehicles/{id}/maintenance/` | the vehicle's maintenance history, newest first, paginated |
-| 6 | `POST /api/vehicles/{id}/assign/` with `{"office": <id>}` | move the vehicle to another office |
-| 7 | `GET /api/mechanics/workload/` | mechanics with job count and cost for the current year, busiest first |
-| 8 | `GET /api/vehicles/needing-maintenance/` | active vehicles never serviced or last serviced more than 365 days ago, oldest first |
-| 9 | `GET /api/vehicles/duplicate-check/?vin=&license_plate=&exclude=` | `{"conflicts": ["vin", "license_plate"]}` for existing conflicting vehicles |
-
-Example, office summary:
+Invalid input returns `400` with errors keyed by field. Deleting an office with vehicles, or a vehicle or mechanic with maintenance records, returns `409`:
 
 ```json
-[
-  {
-    "id": 24,
-    "name": "Cassandraton Hub",
-    "city": "Cassandraton",
-    "active_vehicle_count": 50,
-    "maintenance_cost_last_year": 1096191.8,
-    "last_maintenance": "2026-09-30"
-  }
-]
+{"detail": "Cannot delete: it is referenced by 113 maintenance records."}
 ```
-
-### Errors
-
-| Status | When | Example body |
-|---|---|---|
-| `400` | invalid input or query parameters | `{"license_plate": ["An active vehicle with this license plate already exists."]}` |
-| `404` | unknown id | `{"detail": "No Vehicle matches the given query."}` |
-| `409` | deleting a record other data depends on | `{"detail": "Cannot delete: it is referenced by 113 maintenance records."}` |
-
-Validation errors are keyed by field, so a form can show each message next to its input.
 
 ## Assumptions
 
-**Identity and validation**
-- **VIN:** exactly 17 characters, uppercase letters and digits, without I, O or Q (ISO 3779). The North American check digit isn't validated, because non-US VINs don't have one.
-- **Input cleanup:** VINs are trimmed and uppercased. Plates are uppercased and stripped of anything that isn't A–Z or 0–9, so `abc-12 34` is stored as `ABC1234`. This means `ABC-1234` and `ABC 1234` count as the same plate for uniqueness and for the duplicate check.
-- **Plate uniqueness:** only among active vehicles. An inactive vehicle may keep a plate that an active vehicle now uses; reactivating it is rejected.
-- **Offices:** unique by name *and* city ("Downtown / Austin" and "Downtown / Boston" can both exist).
-- **Years and dates:** vehicle `year` is between 1886 and next year. Maintenance dates can't be in the future.
-- **Maintenance types:** a fixed list (oil change, tire rotation, brakes, inspection, repair, other).
-
-**Active flag**
-- "Inactive" means out of service, possibly temporarily. It's not a deletion.
-- Lists return inactive rows too; use `?is_active=` to filter.
-- Maintenance can be recorded for inactive vehicles and by inactive mechanics, for example backfilling history.
-
-**Deletes**
-- Deleting really deletes; there is no soft delete.
-- An office with vehicles, or a vehicle or mechanic with maintenance records, can't be deleted (`409`). Maintenance history is financial data, so it is never removed as a side effect. To take something out of service, set `is_active` to false.
-- Maintenance records can be deleted freely, to correct mistakes.
-
-**Reports**
-- **Dates:** "today" and "current year" are evaluated in UTC, since offices span several US time zones.
-- **Office summary:**
-  - "Last 12 months" is a rolling window that includes the same date one year ago.
-  - The vehicle count only counts active vehicles; cost and last maintenance include inactive ones, because that money was still spent by the office.
-- **Vehicle search:**
-  - `make` and `model` match case-insensitively.
-  - When `maintenance_from`/`maintenance_to` and `mechanic_certification` are combined, they must all match **the same** maintenance record ("this mechanic serviced the vehicle in this period").
-- **Vehicle assignment:** only the office changes; no assignment history is kept. Assigning to the current office succeeds and changes nothing.
-- **Mechanic workload:**
-  - Lists active mechanics plus any inactive mechanic who worked this year; inactive mechanics with no work this year are left out.
-  - "Busiest" means most jobs, then highest cost, then name.
-- **Needing maintenance:** "more than 365 days" is strict (exactly 365 days ago doesn't qualify). Never-serviced vehicles come first, then oldest service first, with ties broken by VIN.
-- **Duplicate check:** VIN is compared against all vehicles, plate only against active ones. `exclude=<id>` lets an edit form ignore the vehicle being edited.
+- A VIN has 17 characters, uppercase letters and digits, without I, O or Q. The API trims and uppercases it.
+- The API stores plates as A–Z and 0–9 only, so `abc-12 34` becomes `ABC1234`.
+- Two active vehicles can't share a plate. An inactive vehicle can keep a plate an active one now uses, but can't be reactivated while it's taken.
+- Office names are unique per city.
+- A vehicle's year is between 1886 and next year. Maintenance dates can't be in the future.
+- "Inactive" means out of service, not deleted. Lists include inactive rows unless you filter with `?is_active=`. Inactive vehicles and mechanics can still get maintenance records.
+- `DELETE` removes the row. Maintenance history blocks deleting its vehicle, mechanic or office, so the API returns `409` instead. Maintenance records themselves delete freely.
+- The reports use UTC for "today" and "this year", because the offices span several time zones.
+- The office summary's 12 months end today and start on the same date last year. Its cost and last maintenance include inactive vehicles. Its vehicle count doesn't.
+- In vehicle search, `make` and `model` ignore case. The date range and `mechanic_certification` must match the same maintenance record.
+- Assigning a vehicle only changes its office. Assigning it to its current office changes nothing.
+- The workload lists active mechanics plus inactive ones who worked this year. It sorts by job count, then cost, then name.
+- A vehicle needs maintenance after more than 365 days, so exactly 365 doesn't count. Vehicles never serviced come first.
+- The duplicate check compares the VIN against all vehicles and the plate against active ones.
 
 ## Trade-offs
 
-- **Rules enforced in the database:** every rule above that can be a database constraint is one (VIN format, plate format, partial unique plate index, cost ≥ 0, valid maintenance type, year range), so shells, admin actions and bulk scripts can't bypass them. Serializers repeat the checks only to produce readable 400s. The active-plate rule is therefore written twice, as a constraint and as a query, and shares one error message.
-- **Money as JSON numbers:** amounts are serialized as numbers (`81250.5`), matching the brief's example, rather than DRF's default strings. Values stay `Decimal` in Python and the database; clients doing arithmetic on money should be aware they receive floats.
-- **Vehicle details returns the complete history:** as the brief asks. It costs 2 queries regardless of history size; an 800-record vehicle returns in about 30 ms, but the payload is large (about 160 KB). Clients that want pages use `/vehicles/{id}/maintenance/`.
-- **Business logic outside HTTP:** reports and writes live in plain functions (`fleet/selectors.py`, `fleet/services.py`) that take explicit arguments like `today`, so they are tested directly with fixed dates. CRUD stays on DRF's `ModelViewSet`, since wrapping simple creates in service functions would add code without adding behavior.
-- **No `make`/`model` index:** case-insensitive search can't use a plain index on SQLite. At this scale a table scan is fast; for a much larger fleet, functional indexes on `Upper("make")`/`Upper("model")` would be the next step.
-- **Page-number pagination:** each page runs a `COUNT(*)`. Fine at this size; cursor pagination would avoid it on very large tables.
-- **Summary and workload aren't paginated:** they return one row per office or mechanic, which stays small, and the brief's example is a plain list.
-- **No authentication:** the brief says it isn't required.
-- **SQLite:** the project default. Every query uses the ORM and would run unchanged on PostgreSQL.
-
-## Project layout
-
-```
-backend/
-  fleet/
-    models/          # Office, Vehicle, Mechanic, MaintenanceRecord and their constraints
-    normalization.py # VIN / plate / certification cleanup
-    selectors.py     # read queries: search, reports, conflict checks
-    services.py      # writes with business rules (vehicle assignment)
-    serializers.py   # request/response shapes and input validation
-    views.py         # HTTP layer: validate params, call selectors/services
-    seeding.py       # sample data generator used by `manage.py seed`
-    tests/
-  server/            # Django settings and URLs
-frontend/            # Next.js app
-```
+- The database enforces every rule it can express, so admin actions and scripts can't skip them. The active-plate rule also lives in the serializer to return a readable 400.
+- Amounts are JSON numbers, as in the brief's example. They stay `Decimal` in Python and the database.
+- Vehicle details returns the full history in 2 queries. An 800-record vehicle takes about 30 ms but returns about 160 KB. The paginated history endpoint suits clients that want less.
+- Reports and writes live in plain functions (`selectors.py`, `services.py`) and take `today` as an argument, so tests call them with fixed dates. CRUD stays on `ModelViewSet`.
+- `make` and `model` have no index, because case-insensitive search on SQLite can't use a plain one. A large fleet would need functional indexes on `Upper()`.
+- Page-number pagination counts every row. Cursor pagination would avoid that on very large tables.
+- There's no authentication, since the brief doesn't require it.
