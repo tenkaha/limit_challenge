@@ -1,205 +1,94 @@
-# Fleet Maintenance API Take-home Challenge
+# Fleet Maintenance API
 
-Build a REST API for managing a fleet of vehicles and their maintenance history.
+A Django REST Framework API for offices, vehicles, mechanics and maintenance records. The original brief is in [CHALLENGE.md](CHALLENGE.md).
 
-Use Python, Django and Django REST Framework.
+## Run
 
-The API does not need authentication or a frontend.
-
-## Domain
-
-A company owns vehicles that are assigned to offices around the country.
-Vehicles periodically receive maintenance services performed by mechanics.
-A vehicle may have many maintenance records.
-A mechanic may service many vehicles.
-Each office has many vehicles.
-
-Offices
-
-An office has:
-* name
-* city
-
-Vehicles
-
-A vehicle has:
-* VIN (Vehicle Identification Number)
-* license plate
-* make
-* model
-* year
-* office
-* active flag
-
-A VIN must uniquely identify a vehicle.
-A license plate cannot be shared by two active vehicles.
-
-Provide CRUD endpoints.
-
-A mechanic has:
-
-name
-certification number
-active flag
-
-Provide CRUD endpoints.
-
-Maintenance Records
-
-A maintenance record contains:
-
-vehicle
-mechanic
-maintenance date
-maintenance type
-cost
-notes
-
-Provide CRUD endpoints.
-
-## API endpoints
-
-1. CRUD endpoints for offices, vehicles, mechanics and maintenance records.
-
-2. Office summary
-
-It should return every office together with:
-* number of active vehicles
-* total maintenance cost during the last 12 months
-* date of the most recent maintenance performed on any vehicle in that office
-
-Example:
-[
-    {
-        "name": "New York",
-        "city": "New York",
-        "active_vehicle_count": 42,
-        "maintenance_cost_last_year": 81250.50,
-        "last_maintenance": "2025-02-18"
-    }
-]
-
-3. Vehicle search
-
-It should support optional filtering by any combination of:
-
-* office
-* active/inactive
-* make
-* model
-* maintenance performed between two dates
-* mechanic certification number
-
-4. Vehicle details
-
-Return vehicle details together with:
-* office information
-* complete maintenance history
-* mechanic information for each maintenance record
-
-The endpoint should perform well when a vehicle has hundreds of maintenance records.
-
-5. Vehicle maintenance history
-
-Provide an endpoint that returns the maintenance history for a single vehicle ordered from newest to oldest.
-
-6. Assign vehicle
-
-Provide an endpoint that moves a vehicle from one office to another.
-
-The endpoint should record only the new office assignment.
-
-7. Mechanic workload
-
-It should return:
-* mechanic name
-* number of maintenance records completed during the current year
-* total maintenance cost of work performed during the current year
-
-Order mechanics from busiest to least busy.
-
-8. Vehicles needing maintenance
-
-It should return all active vehicles that satisfy either of the following:
-* have never received maintenance
-* last maintenance was more than 365 days ago
-
-Order by oldest maintenance first.
-
-9. Duplicate vehicle check
-
-Given VIN and license plate, it should return whether another conflicting vehicle already exists and identifies the conflicting fields.
-
-Example:
-
-{
-    "conflicts": [
-        "vin",
-        "license_plate"
-    ]
-}
-
-## Front-end
-
-If you know React, implement a front-end that uses the CRUD endpoints, the vehicle search one 
-and another endpoint you choose.
-
-The Next.js 16 + React 19 app in `frontend/` is pre-wired for this challenge. Material UI handles
-layout, axios powers HTTP requests, and `@tanstack/react-query` is ready for data fetching. 
-
-## Error Handling
-
-Return appropriate HTTP status codes for invalid requests.
-Validation errors should include meaningful messages.
-
-## Project Structure
-
-- `backend/`: Empty Django project.
-- `frontend/`: Empty Next.js app.
-
-## Getting Started
-
-### Backend
+Requires Python 3.13.
 
 ```bash
 cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 python manage.py migrate
+python manage.py seed
 python manage.py runserver 0.0.0.0:8000
 ```
 
-### Frontend
+The API lives at `http://localhost:8000/api/`.
+
+`seed` creates 13 offices, 42 mechanics, 605 vehicles and about 61,000 maintenance records in roughly 4 seconds. The data is the same on every run (`--seed 42`). It refuses to run over existing data unless you pass `--flush`. Five vehicles have 800 records each, to exercise the vehicle details endpoint. It also adds these edge cases:
+
+| Data | Expected result |
+|---|---|
+| Vehicle `NEVER1` | first in needing-maintenance |
+| Vehicles `DUE365`, `DUE366` | only `DUE366` needs maintenance |
+| Plate `REUSE1` on an inactive and an active vehicle | allowed |
+| Mechanics `Idle Ivy` (active, no work) and `Retired Rex` (inactive, worked this year) | both appear in the workload |
+| Office `Empty Lot` | 0 vehicles, 0 cost, no last maintenance |
+
+## Test
 
 ```bash
-cd frontend
-npm install
-# NEXT_PUBLIC_API_BASE_URL defaults to http://localhost:8000/api
-npm run dev
+cd backend
+python manage.py test
 ```
 
-Visit `http://localhost:3000` in your web browser to run it.
+The tests need only `requirements.txt`. For the dev tooling, install `requirements-dev.txt` and run:
 
-## Deliverables
+```bash
+coverage run manage.py test && coverage report   # fails below 90%
+ruff format --check . && ruff check .
+mypy .
+```
 
-source code
-database migrations
-a Django management command that fills the database with dummy data to make manually testing your app easier (suggestion: use the faker Python library)
-README describing:
-  how to run the project
-  how to run tests
-  assumptions made
-  chosen tradeoffs  
-if front-end was implemented, record and share a brief video (max 2 minutes) demonstrating the frontend working end-to-end with the backend.
+CI runs these checks on every pull request, and `main` rejects merges that fail them. `lefthook install` adds the same checks as git hooks.
 
-## Evaluation Criteria
+## API
 
-- **Backend (50%)** – API design, database queries performance, appropriate use of Django and Django Rest Framework
-- **Frontend (25%)** – UX clarity, filter UX tied to query params, state/data management, handling
-  of loading/empty/error cases, and overall polish.
-- **Code Quality (15%)** – Code structure, testing where it adds value, documentation/readability, naming
-- **Product Thinking (10%)** – Workflow clarity, assumptions noted, and thoughtful UX details (if front-end is implemented)
+List endpoints accept `?page=`, `?page_size=` (max 100) and `?ordering=`.
 
-## Optional Bonus
+| Endpoint | Purpose |
+|---|---|
+| `/api/offices/`, `/api/vehicles/`, `/api/mechanics/`, `/api/maintenance-records/` | CRUD |
+| `GET /api/offices/summary/` | active vehicles, 12-month cost and last maintenance per office |
+| `GET /api/vehicles/?office=&is_active=&make=&model=&maintenance_from=&maintenance_to=&mechanic_certification=` | vehicle search |
+| `GET /api/vehicles/{id}/` | vehicle with office and full maintenance history |
+| `GET /api/vehicles/{id}/maintenance/` | history, newest first, paginated |
+| `POST /api/vehicles/{id}/assign/` `{"office": id}` | move a vehicle to another office |
+| `GET /api/mechanics/workload/` | this year's jobs and cost per mechanic, busiest first |
+| `GET /api/vehicles/needing-maintenance/` | active vehicles never serviced or last serviced over 365 days ago |
+| `GET /api/vehicles/duplicate-check/?vin=&license_plate=&exclude=` | `{"conflicts": ["vin", "license_plate"]}` |
 
-Authentication using JWT is not required but welcome if time allows.
+Invalid input returns `400` with errors keyed by field. Deleting an office with vehicles, or a vehicle or mechanic with maintenance records, returns `409`:
+
+```json
+{"detail": "Cannot delete: it is referenced by 113 maintenance records."}
+```
+
+## Assumptions
+
+- A VIN has 17 characters, uppercase letters and digits, without I, O or Q. The API trims and uppercases it.
+- The API stores plates as uppercase letters and digits only, so `abc-12 34` becomes `ABC1234`.
+- Two active vehicles can't share a plate. An inactive vehicle can keep a plate an active one now uses, but can't be reactivated while it's taken.
+- Office names are unique per city.
+- A vehicle's year is between 1886 and next year. Maintenance dates can't be in the future.
+- "Inactive" means out of service, not deleted. Lists include inactive rows unless you filter with `?is_active=`. Inactive vehicles and mechanics can still get maintenance records.
+- `DELETE` removes the row. Maintenance history blocks deleting its vehicle, mechanic or office, so the API returns `409` instead. Maintenance records themselves delete freely.
+- The reports use UTC for "today" and "this year", because the offices span several time zones.
+- The office summary's 12 months end today and start on the same date last year. Its cost and last maintenance include inactive vehicles. Its vehicle count doesn't.
+- In vehicle search, `make` and `model` ignore case. The date range and `mechanic_certification` must match the same maintenance record.
+- Assigning a vehicle only changes its office. Assigning it to its current office changes nothing.
+- The workload lists active mechanics plus inactive ones who worked this year. It sorts by job count, then cost, then name.
+- A vehicle needs maintenance after more than 365 days, so exactly 365 doesn't count. Vehicles never serviced come first.
+- The duplicate check compares the VIN against all vehicles and the plate against active ones.
+
+## Trade-offs
+
+- The database enforces every rule it can express, so admin actions and scripts can't skip them. The active-plate rule also lives in the serializer to return a readable 400.
+- Amounts are JSON numbers, as in the brief's example. They stay `Decimal` in Python and the database.
+- Vehicle details returns the full history in 2 queries. An 800-record vehicle takes about 30 ms but returns about 160 KB. The paginated history endpoint suits clients that want less.
+- Reports and writes live in plain functions (`selectors.py`, `services.py`) and take `today` as an argument, so tests call them with fixed dates. CRUD stays on `ModelViewSet`.
+- `make` and `model` have no index, because case-insensitive search on SQLite can't use a plain one. A large fleet would need functional indexes on `Upper()`.
+- Page-number pagination counts every row. Cursor pagination would avoid that on very large tables.
+- There's no authentication, since the brief doesn't require it.
