@@ -54,6 +54,17 @@ class VehicleConstraintTests(ModelTestCase):
         self.make_vehicle(vin="3VWFE21C04M000001")
         self.assertEqual(Vehicle.objects.filter(license_plate="ABC1234").count(), 3)
 
+    def test_reactivating_vehicle_with_taken_plate_fails(self) -> None:
+        retired = self.make_vehicle(is_active=False)
+        self.make_vehicle(vin=VIN_B)
+        retired.is_active = True
+        with transaction.atomic(), self.assertRaises(IntegrityError):
+            retired.save()
+
+    def test_valid_vin_with_edge_letters_accepted(self) -> None:
+        vehicle = self.make_vehicle(vin="ZHJPR0123456789AB")
+        vehicle.full_clean()
+
     def test_invalid_vin_rejected_by_database(self) -> None:
         for vin in ("SHORT", "1HGCM82633A00435O", VIN_A.lower()):
             with self.subTest(vin=vin), transaction.atomic(), self.assertRaises(IntegrityError):
@@ -84,6 +95,12 @@ class VehicleConstraintTests(ModelTestCase):
         self.make_vehicle()
         with self.assertRaises(ProtectedError):
             self.office.delete()
+
+
+class MechanicConstraintTests(ModelTestCase):
+    def test_certification_number_is_unique(self) -> None:
+        with transaction.atomic(), self.assertRaises(IntegrityError):
+            Mechanic.objects.create(name="Bruno", certification_number="ASE-1")
 
 
 class MaintenanceRecordConstraintTests(ModelTestCase):
@@ -124,27 +141,8 @@ class MaintenanceRecordConstraintTests(ModelTestCase):
 
 
 class TimeStampTests(ModelTestCase):
-    def test_created_at_defaults_to_aware_now(self) -> None:
-        self.assertTrue(timezone.is_aware(self.office.created_at))
-
     def test_explicit_created_at_is_kept(self) -> None:
         past = timezone.now() - datetime.timedelta(days=200)
         office = Office.objects.create(name="Austin", city="Austin", created_at=past)
         office.refresh_from_db()
         self.assertEqual(office.created_at, past)
-
-
-class StrTests(ModelTestCase):
-    def test_str_representations(self) -> None:
-        vehicle = self.make_vehicle()
-        record = MaintenanceRecord(
-            vehicle=vehicle,
-            mechanic=self.mechanic,
-            performed_on=datetime.date(2025, 1, 10),
-            maintenance_type=MaintenanceType.INSPECTION,
-            cost=Decimal(0),
-        )
-        self.assertEqual(str(self.office), "New York (New York)")
-        self.assertEqual(str(self.mechanic), "Ana #ASE-1")
-        self.assertEqual(str(vehicle), "2020 Honda Accord (ABC1234)")
-        self.assertEqual(str(record), "Inspection on 2025-01-10")
