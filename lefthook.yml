@@ -17,9 +17,9 @@ pre-push:
     mypy:
       root: backend/
       run: .venv/bin/mypy .
-    pytest:
+    test:
       root: backend/
-      run: .venv/bin/pytest -q
+      run: .venv/bin/python -W error -m coverage run manage.py test && .venv/bin/coverage report
 
 commit-msg:
   commands:

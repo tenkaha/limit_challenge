@@ -47,4 +47,5 @@ jobs:
           cache-dependency-path: backend/requirements*.txt
       - run: pip install -r requirements-dev.txt
       - run: python manage.py makemigrations --check --dry-run
-      - run: pytest
+      - run: python -W error -m coverage run manage.py test
+      - run: coverage report
