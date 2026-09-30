@@ -2,13 +2,14 @@
 
 import {
   Alert,
+  Box,
   Button,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  IconButton,
   Paper,
-  Snackbar,
   Stack,
   Table,
   TableBody,
@@ -16,32 +17,57 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import ConfirmDialog from '@/components/confirm-dialog';
+import LabeledInput from '@/components/labeled-input';
 import PageHeader from '@/components/page-header';
 import QueryState from '@/components/query-state';
+import { useToast } from '@/components/toast';
 import { api } from '@/lib/api';
+import { blockedCount } from '@/lib/blocked';
 import { errorMessage, fieldErrors } from '@/lib/errors';
 import { formatDate, formatMoney } from '@/lib/format';
-import type { Office, OfficeInput } from '@/lib/types';
+import type { Office, OfficeInput, OfficeSummary } from '@/lib/types';
+
+const tabular = { fontVariantNumeric: 'tabular-nums' };
+const visuallyHidden = { position: 'absolute', left: -9999 } as const;
+
+function windowStart(): string {
+  const since = new Date();
+  since.setFullYear(since.getFullYear() - 1);
+  return since.toLocaleDateString('en-US', { dateStyle: 'medium' });
+}
 
 export default function OfficesPage() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const summary = useQuery({ queryKey: ['offices', 'summary'], queryFn: api.offices.summary });
   const [editing, setEditing] = useState<Office | 'new' | null>(null);
-  const [deleting, setDeleting] = useState<Office | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<OfficeSummary | null>(null);
 
   const remove = useMutation({
-    mutationFn: (id: number) => api.offices.remove(id),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['offices'] });
+    mutationFn: (office: OfficeSummary) => api.offices.remove(office.id),
+    onSuccess: async (_data, office) => {
       setDeleting(null);
-      setNotice('Office deleted.');
+      toast.success('Office deleted', office.name);
+      await queryClient.invalidateQueries({ queryKey: ['offices'] });
+    },
+    onError: (error, office) => {
+      setDeleting(null);
+      // The count comes from the API: the summary only counts active vehicles,
+      // but inactive ones block the delete too.
+      const count = blockedCount(error);
+      toast.error(
+        `Can't delete ${office.name}`,
+        count === null
+          ? errorMessage(error)
+          : `It still has ${count} ${count === 1 ? 'vehicle' : 'vehicles'}. Move them to another office first.`,
+      );
     },
   });
 
@@ -51,16 +77,18 @@ export default function OfficesPage() {
     <>
       <PageHeader
         title="Offices"
+        subtitle={`Cost covers the last 12 months (${windowStart()} – today) and includes inactive vehicles.`}
         action={
-          <Button variant="contained" onClick={() => setEditing('new')}>
+          <Button
+            variant="contained"
+            startIcon={<Plus size={16} />}
+            onClick={() => setEditing('new')}
+            sx={{ minHeight: 44 }}
+          >
             New office
           </Button>
         }
       />
-      <Typography color="text.secondary" variant="body2" mb={2}>
-        Cost covers the last 12 months, from the same date last year up to today, and includes
-        inactive vehicles. The vehicle count only includes active vehicles.
-      </Typography>
       <QueryState
         isPending={summary.isPending}
         error={summary.error}
@@ -69,43 +97,62 @@ export default function OfficesPage() {
         emptyMessage="No offices yet. Create the first one."
       >
         <TableContainer component={Paper} variant="outlined">
-          <Table size="small">
+          <Table aria-label="Offices">
             <TableHead>
               <TableRow>
-                <TableCell>Name</TableCell>
-                <TableCell>City</TableCell>
+                <TableCell>Office</TableCell>
                 <TableCell align="right">Active vehicles</TableCell>
                 <TableCell align="right">Cost, last 12 months</TableCell>
                 <TableCell>Last maintenance</TableCell>
-                <TableCell align="right">Actions</TableCell>
+                <TableCell align="right">
+                  <Box component="span" sx={visuallyHidden}>
+                    Actions
+                  </Box>
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {offices.map((office) => (
                 <TableRow key={office.id} hover>
-                  <TableCell>{office.name}</TableCell>
-                  <TableCell>{office.city}</TableCell>
-                  <TableCell align="right">{office.active_vehicle_count}</TableCell>
-                  <TableCell align="right">
+                  <TableCell>
+                    <Typography fontSize={14} fontWeight={500}>
+                      {office.name}
+                    </Typography>
+                    <Typography fontSize={13} color="text.secondary">
+                      {office.city}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="right" sx={tabular}>
+                    {office.active_vehicle_count}
+                  </TableCell>
+                  <TableCell align="right" sx={tabular}>
                     {formatMoney(office.maintenance_cost_last_year)}
                   </TableCell>
-                  <TableCell>{formatDate(office.last_maintenance)}</TableCell>
-                  <TableCell align="right">
-                    <Stack direction="row" spacing={1} justifyContent="flex-end">
-                      <Button size="small" onClick={() => setEditing(office)}>
-                        Edit
-                      </Button>
-                      <Button
-                        size="small"
-                        color="error"
+                  <TableCell sx={{ color: 'text.secondary' }}>
+                    {office.last_maintenance
+                      ? formatDate(office.last_maintenance)
+                      : 'No maintenance yet'}
+                  </TableCell>
+                  <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                    <Tooltip title="Edit">
+                      <IconButton
+                        aria-label={`Edit ${office.name}`}
+                        onClick={() => setEditing(office)}
+                      >
+                        <Pencil size={18} />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete">
+                      <IconButton
+                        aria-label={`Delete ${office.name}`}
                         onClick={() => {
                           remove.reset();
                           setDeleting(office);
                         }}
                       >
-                        Delete
-                      </Button>
-                    </Stack>
+                        <Trash2 size={18} />
+                      </IconButton>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               ))}
@@ -118,9 +165,9 @@ export default function OfficesPage() {
         <OfficeDialog
           office={editing === 'new' ? null : editing}
           onClose={() => setEditing(null)}
-          onSaved={(message) => {
+          onSaved={(title, detail) => {
             setEditing(null);
-            setNotice(message);
+            toast.success(title, detail);
           }}
         />
       ) : null}
@@ -128,20 +175,13 @@ export default function OfficesPage() {
       <ConfirmDialog
         open={deleting !== null}
         title="Delete office?"
-        message={`"${deleting?.name ?? ''}" will be removed permanently.`}
+        message={`${deleting?.name ?? ''} will be removed permanently.`}
         isPending={remove.isPending}
-        error={remove.error}
+        error={null}
         onConfirm={() => {
-          if (deleting) remove.mutate(deleting.id);
+          if (deleting) remove.mutate(deleting);
         }}
         onClose={() => setDeleting(null)}
-      />
-
-      <Snackbar
-        open={notice !== null}
-        autoHideDuration={3000}
-        onClose={() => setNotice(null)}
-        message={notice}
       />
     </>
   );
@@ -154,7 +194,7 @@ function OfficeDialog({
 }: {
   office: Office | null;
   onClose: () => void;
-  onSaved: (message: string) => void;
+  onSaved: (title: string, detail: string) => void;
 }) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<OfficeInput>({
@@ -164,9 +204,9 @@ function OfficeDialog({
   const save = useMutation({
     mutationFn: (input: OfficeInput) =>
       office ? api.offices.update(office.id, input) : api.offices.create(input),
-    onSuccess: async () => {
+    onSuccess: async (saved) => {
       await queryClient.invalidateQueries({ queryKey: ['offices'] });
-      onSaved(office ? 'Office updated.' : 'Office created.');
+      onSaved(office ? 'Office updated' : 'Office created', saved.name);
     },
   });
   const errors = fieldErrors(save.error);
@@ -180,33 +220,35 @@ function OfficeDialog({
           save.mutate(form);
         }}
       >
-        <DialogTitle>{office ? 'Edit office' : 'New office'}</DialogTitle>
+        <DialogTitle sx={{ fontSize: 18, fontWeight: 600 }}>
+          {office ? 'Edit office' : 'New office'}
+        </DialogTitle>
         <DialogContent>
-          <Stack spacing={2} mt={1}>
-            <TextField
+          <Stack spacing={2} mt={0.5}>
+            {otherError ? <Alert severity="error">{otherError}</Alert> : null}
+            <LabeledInput
+              id="office-name"
               label="Name"
               value={form.name}
-              onChange={(event) => setForm({ ...form, name: event.target.value })}
-              error={Boolean(errors.name)}
-              helperText={errors.name}
-              required
+              error={errors.name}
               autoFocus
+              onChange={(name) => setForm({ ...form, name })}
             />
-            <TextField
+            <LabeledInput
+              id="office-city"
               label="City"
               value={form.city}
-              onChange={(event) => setForm({ ...form, city: event.target.value })}
-              error={Boolean(errors.city)}
-              helperText={errors.city}
-              required
+              error={errors.city}
+              onChange={(city) => setForm({ ...form, city })}
             />
-            {otherError ? <Alert severity="error">{otherError}</Alert> : null}
           </Stack>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button type="submit" variant="contained" loading={save.isPending}>
-            Save
+        <DialogActions sx={{ px: 3, py: 2, borderTop: 1, borderColor: 'divider' }}>
+          <Button variant="outlined" color="inherit" onClick={onClose} sx={{ minHeight: 44 }}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="contained" loading={save.isPending} sx={{ minHeight: 44 }}>
+            Save office
           </Button>
         </DialogActions>
       </form>
