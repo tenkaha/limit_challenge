@@ -61,29 +61,28 @@ def one_year_before(day: datetime.date) -> datetime.date:
 
 
 def search_vehicles(filters: VehicleFilters) -> QuerySet[Vehicle]:
-    vehicles = Vehicle.objects.all()
-    if filters.office is not None:
-        vehicles = vehicles.filter(office_id=filters.office)
-    if filters.is_active is not None:
-        vehicles = vehicles.filter(is_active=filters.is_active)
-    if filters.make:
-        vehicles = vehicles.filter(make__iexact=filters.make)
-    if filters.model:
-        vehicles = vehicles.filter(model__iexact=filters.model)
-
+    vehicles = Vehicle.objects.filter(
+        **_given(
+            office_id=filters.office,
+            is_active=filters.is_active,
+            make__iexact=filters.make,
+            model__iexact=filters.model,
+        )
+    )
     # Date range and mechanic must match the same maintenance record, so they
     # share one Exists() subquery instead of separate joins.
-    record_filters = Q()
-    if filters.maintenance_from:
-        record_filters &= Q(performed_on__gte=filters.maintenance_from)
-    if filters.maintenance_to:
-        record_filters &= Q(performed_on__lte=filters.maintenance_to)
-    if filters.mechanic_certification:
-        record_filters &= Q(mechanic__certification_number=filters.mechanic_certification)
-    if record_filters:
-        records = MaintenanceRecord.objects.filter(record_filters, vehicle=OuterRef("pk"))
+    if record_lookups := _given(
+        performed_on__gte=filters.maintenance_from,
+        performed_on__lte=filters.maintenance_to,
+        mechanic__certification_number=filters.mechanic_certification,
+    ):
+        records = MaintenanceRecord.objects.filter(vehicle=OuterRef("pk"), **record_lookups)
         vehicles = vehicles.filter(Exists(records))
     return vehicles
+
+
+def search_mechanics(*, is_active: bool | None = None) -> QuerySet[Mechanic]:
+    return Mechanic.objects.filter(**_given(is_active=is_active))
 
 
 def vehicle_with_history() -> QuerySet[Vehicle]:
@@ -154,3 +153,7 @@ def vehicles_needing_maintenance(
         .filter(Q(last_maintenance__isnull=True) | Q(last_maintenance__lt=cutoff))
         .order_by(F("last_maintenance").asc(nulls_first=True), "vin")
     )
+
+
+def _given(**lookups: object) -> dict[str, object]:
+    return {lookup: value for lookup, value in lookups.items() if value is not None}

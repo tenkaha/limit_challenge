@@ -86,12 +86,10 @@ class MechanicViewSet(viewsets.ModelViewSet[Mechanic]):
 
     @override
     def get_queryset(self) -> QuerySet[Mechanic]:
-        mechanics = Mechanic.objects.all()
         if self.action == "list":
-            is_active = _validated(ActiveFilterSerializer, self.request).validated_data["is_active"]
-            if is_active is not None:
-                mechanics = mechanics.filter(is_active=is_active)
-        return mechanics
+            params = _validated(ActiveFilterSerializer, self.request)
+            return selectors.search_mechanics(**params.validated_data)
+        return Mechanic.objects.all()
 
     @action(detail=False)
     def workload(self, request: Request) -> Response:
