@@ -31,7 +31,7 @@ plugins = ["mypy_django_plugin.main", "mypy_drf_plugin.main"]
 exclude = ["/migrations/"]
 
 [[tool.mypy.overrides]]
-module = ["factory.*", "corsheaders.*"]
+module = ["corsheaders.*"]
 ignore_missing_imports = true
 
 [tool.django-stubs]
