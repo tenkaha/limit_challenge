@@ -9,7 +9,8 @@ from fleet.models.office import Office
 # ISO 3779: 17 characters, letters I, O and Q are never used.
 VIN_PATTERN = r"^[A-HJ-NPR-Z0-9]{17}$"
 # Plates are stored normalized: uppercase letters and digits, no separators.
-PLATE_PATTERN = r"^[A-Z0-9]+$"
+PLATE_CHARS = "A-Z0-9"
+PLATE_PATTERN = rf"^[{PLATE_CHARS}]+$"
 FIRST_MODEL_YEAR = 1886
 
 PLATE_TAKEN_MESSAGE = "An active vehicle with this license plate already exists."
