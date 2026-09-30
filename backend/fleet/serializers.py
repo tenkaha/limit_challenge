@@ -7,6 +7,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from fleet.models import MaintenanceRecord, Mechanic, Office, Vehicle
+from fleet.models.office import OFFICE_TAKEN_MESSAGE
 from fleet.models.vehicle import PLATE_TAKEN_MESSAGE, plate_format_validator
 from fleet.normalization import normalize_certification, normalize_plate, normalize_vin
 from fleet.selectors import VehicleFilters, active_plate_taken
@@ -18,6 +19,20 @@ class OfficeSerializer(serializers.ModelSerializer[Office]):
     class Meta:
         model = Office
         fields = ("id", "name", "city")
+        # Replaces DRF's UniqueTogetherValidator so the error lands on "name"
+        # (where a form shows it) instead of non_field_errors.
+        validators: ClassVar[list[object]] = []
+
+    @override
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        name = attrs.get("name", getattr(self.instance, "name", None))
+        city = attrs.get("city", getattr(self.instance, "city", None))
+        taken = Office.objects.filter(name=name, city=city)
+        if self.instance is not None:
+            taken = taken.exclude(pk=self.instance.pk)
+        if taken.exists():
+            raise serializers.ValidationError({"name": OFFICE_TAKEN_MESSAGE})
+        return attrs
 
 
 class MechanicSerializer(serializers.ModelSerializer[Mechanic]):
@@ -47,7 +62,15 @@ class VehicleSerializer(serializers.ModelSerializer[Vehicle]):
         )
         # DRF's auto UniqueValidator for the conditional plate constraint ignores
         # the incoming is_active, so validate() checks it instead.
-        extra_kwargs: ClassVar = {"license_plate": {"validators": [plate_format_validator]}}
+        extra_kwargs: ClassVar = {
+            "license_plate": {
+                "validators": [plate_format_validator],
+                # Normalization strips every separator, so "---" arrives blank.
+                "error_messages": {
+                    "blank": "License plate must contain at least one letter or digit."
+                },
+            }
+        }
 
     @override
     def to_internal_value(self, data: Any) -> Any:

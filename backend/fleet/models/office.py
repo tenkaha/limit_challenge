@@ -4,6 +4,8 @@ from django.db import models
 
 from fleet.models.base import TimeStampedModel
 
+OFFICE_TAKEN_MESSAGE = "An office with this name already exists in this city."
+
 
 class Office(TimeStampedModel):
     name = models.CharField(max_length=255)
@@ -15,7 +17,7 @@ class Office(TimeStampedModel):
             models.UniqueConstraint(
                 fields=("name", "city"),
                 name="uniq_office_name_city",
-                violation_error_message="An office with this name already exists in this city.",
+                violation_error_message=OFFICE_TAKEN_MESSAGE,
             ),
         )
 
