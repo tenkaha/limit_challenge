@@ -2,7 +2,7 @@ import re
 
 from fleet.models.vehicle import PLATE_CHARS
 
-NON_PLATE_CHARS = re.compile(rf"[^{PLATE_CHARS}]")
+DISALLOWED_PLATE_CHARS = re.compile(rf"[^{PLATE_CHARS}]")
 
 
 def normalize_vin(vin: str) -> str:
@@ -10,7 +10,7 @@ def normalize_vin(vin: str) -> str:
 
 
 def normalize_plate(plate: str) -> str:
-    return NON_PLATE_CHARS.sub("", plate.upper())
+    return DISALLOWED_PLATE_CHARS.sub("", plate.upper())
 
 
 def normalize_certification(certification_number: str) -> str:
