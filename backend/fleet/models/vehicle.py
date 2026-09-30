@@ -2,13 +2,14 @@ from typing import override
 
 from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models
-from django.db.models.functions import Upper
 
 from fleet.models.base import TimeStampedModel
 from fleet.models.office import Office
 
 # ISO 3779: 17 characters, letters I, O and Q are never used.
 VIN_PATTERN = r"^[A-HJ-NPR-Z0-9]{17}$"
+# Plates are stored normalized: uppercase letters and digits, no separators.
+PLATE_PATTERN = r"^[A-Z0-9]+$"
 FIRST_MODEL_YEAR = 1886
 
 
@@ -19,7 +20,10 @@ class Vehicle(TimeStampedModel):
         unique=True,
         validators=[RegexValidator(VIN_PATTERN, "VIN must be 17 characters, excluding I, O, Q.")],
     )
-    license_plate = models.CharField(max_length=20)
+    license_plate = models.CharField(
+        max_length=20,
+        validators=[RegexValidator(PLATE_PATTERN, "License plate must contain only A-Z and 0-9.")],
+    )
     make = models.CharField(max_length=255)
     model = models.CharField(max_length=255)
     year = models.PositiveSmallIntegerField(validators=[MinValueValidator(FIRST_MODEL_YEAR)])
@@ -40,8 +44,8 @@ class Vehicle(TimeStampedModel):
                 name="vehicle_vin_format",
             ),
             models.CheckConstraint(
-                condition=models.Q(license_plate=Upper("license_plate")),
-                name="vehicle_license_plate_uppercase",
+                condition=models.Q(license_plate__regex=PLATE_PATTERN),
+                name="vehicle_license_plate_format",
             ),
             models.CheckConstraint(
                 condition=models.Q(year__gte=FIRST_MODEL_YEAR),
