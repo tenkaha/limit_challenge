@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
+import { useToast } from '@/components/toast';
 import { api } from '@/lib/api';
 import { errorMessage, fieldErrors, type FieldErrors } from '@/lib/errors';
 import {
@@ -43,10 +44,14 @@ export default function RecordDialog({ vehicleId, record, onClose, onSaved }: Re
     notes: record?.notes ?? '',
   });
 
+  const toast = useToast();
   const save = useMutation({
     mutationFn: (input: MaintenanceRecordInput) =>
       record ? api.records.update(record.id, input) : api.records.create(input),
-    onSuccess: onSaved,
+    onSuccess: () => {
+      toast.success(record ? 'Record updated' : 'Record added');
+      onSaved();
+    },
   });
 
   const [missingMechanic, setMissingMechanic] = useState(false);
@@ -75,9 +80,15 @@ export default function RecordDialog({ vehicleId, record, onClose, onSaved }: Re
   return (
     <Dialog open onClose={onClose} maxWidth="sm" fullWidth>
       <form onSubmit={submit} noValidate>
-        <DialogTitle>{record ? 'Edit maintenance record' : 'Add maintenance record'}</DialogTitle>
+        <DialogTitle sx={{ fontSize: 18, fontWeight: 600, pb: 1 }}>
+          {record ? 'Edit maintenance record' : 'Add maintenance record'}
+        </DialogTitle>
         <DialogContent>
-          <Stack spacing={2} mt={1}>
+          <Stack
+            spacing={2}
+            mt={1}
+            sx={{ '& .MuiInputBase-root:not(.MuiInputBase-multiline)': { minHeight: 44 } }}
+          >
             {save.error && !hasFieldErrors ? (
               <Alert severity="error">{errorMessage(save.error)}</Alert>
             ) : null}
@@ -143,10 +154,17 @@ export default function RecordDialog({ vehicleId, record, onClose, onSaved }: Re
             />
           </Stack>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose}>Cancel</Button>
+        <DialogActions sx={{ px: 3, py: 2, borderTop: 1, borderColor: 'divider' }}>
+          <Button
+            variant="outlined"
+            color="inherit"
+            onClick={onClose}
+            sx={{ borderColor: 'divider' }}
+          >
+            Cancel
+          </Button>
           <Button type="submit" variant="contained" loading={save.isPending}>
-            Save
+            {record ? 'Save record' : 'Add record'}
           </Button>
         </DialogActions>
       </form>
