@@ -1,7 +1,8 @@
 'use client';
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
+import { rememberVehicleSearch } from '@/lib/last-search';
 import type { VehicleFilters } from '@/lib/types';
 
 export const FILTER_KEYS = [
@@ -43,6 +44,8 @@ export function useVehicleFilters() {
     },
     [pathname, router, searchParams],
   );
+
+  useEffect(() => rememberVehicleSearch(searchParams.toString()), [searchParams]);
 
   const activeCount = FILTER_KEYS.filter((key) => filters[key]).length;
   const clear = useCallback(() => router.replace(pathname), [pathname, router]);
