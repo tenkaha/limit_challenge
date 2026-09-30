@@ -2,7 +2,9 @@
 
 import {
   Alert,
+  Box,
   Button,
+  Checkbox,
   Dialog,
   DialogActions,
   DialogContent,
@@ -10,20 +12,21 @@ import {
   FormControlLabel,
   MenuItem,
   Stack,
-  Switch,
   TextField,
 } from '@mui/material';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { fonts } from '@/app/theme';
 import { api } from '@/lib/api';
 import { errorMessage, fieldErrors } from '@/lib/errors';
+import { normalizePlate } from '@/lib/normalize';
 import type { Office, Vehicle, VehicleInput } from '@/lib/types';
 
 interface Props {
   vehicle: Vehicle | null;
   offices: Office[];
   onClose: () => void;
-  onSaved: (message: string) => void;
+  onSaved: (saved: Vehicle, created: boolean) => void;
 }
 
 const EMPTY: VehicleInput = {
@@ -36,6 +39,8 @@ const EMPTY: VehicleInput = {
   is_active: true,
 };
 
+const monoInput = { htmlInput: { style: { fontFamily: fonts.mono } } };
+
 export default function VehicleFormDialog({ vehicle, offices, onClose, onSaved }: Props) {
   const queryClient = useQueryClient();
   const [form, setForm] = useState<VehicleInput>(() =>
@@ -47,22 +52,13 @@ export default function VehicleFormDialog({ vehicle, offices, onClose, onSaved }
     onSuccess: async (saved) => {
       await queryClient.invalidateQueries({ queryKey: ['vehicles'] });
       await queryClient.invalidateQueries({ queryKey: ['vehicle', saved.id] });
-      onSaved(vehicle ? 'Vehicle updated' : 'Vehicle created');
+      onSaved(saved, vehicle === null);
     },
   });
   const errors = fieldErrors(save.error);
   const generalError = save.error && Object.keys(errors).length === 0;
-
-  const text = (key: 'vin' | 'license_plate' | 'make' | 'model', label: string, help?: string) => (
-    <TextField
-      label={label}
-      value={form[key]}
-      required
-      error={Boolean(errors[key])}
-      helperText={errors[key] ?? help}
-      onChange={(event) => setForm({ ...form, [key]: event.target.value })}
-    />
-  );
+  const plate = normalizePlate(form.license_plate);
+  const set = (changes: Partial<VehicleInput>) => setForm({ ...form, ...changes });
 
   return (
     <Dialog open onClose={onClose} maxWidth="sm" fullWidth>
@@ -72,17 +68,60 @@ export default function VehicleFormDialog({ vehicle, offices, onClose, onSaved }
           save.mutate(form);
         }}
       >
-        <DialogTitle>{vehicle ? 'Edit vehicle' : 'New vehicle'}</DialogTitle>
+        <DialogTitle sx={{ fontWeight: 600 }}>
+          {vehicle ? 'Edit vehicle' : 'New vehicle'}
+        </DialogTitle>
         <DialogContent>
           <Stack spacing={2} mt={1}>
             {generalError ? <Alert severity="error">{errorMessage(save.error)}</Alert> : null}
-            {text('vin', 'VIN', '17 characters, no I, O or Q')}
-            {text('license_plate', 'License plate', 'Spaces and dashes are removed')}
-            <Stack direction="row" spacing={2}>
-              {text('make', 'Make')}
-              {text('model', 'Model')}
-            </Stack>
-            <Stack direction="row" spacing={2}>
+            <TextField
+              label="VIN"
+              required
+              value={form.vin}
+              error={Boolean(errors.vin)}
+              helperText={errors.vin ?? '17 characters, no I, O or Q'}
+              slotProps={monoInput}
+              onChange={(event) => set({ vin: event.target.value })}
+            />
+            <TextField
+              label="License plate"
+              required
+              value={form.license_plate}
+              error={Boolean(errors.license_plate)}
+              helperText={
+                errors.license_plate ??
+                (plate ? (
+                  <>
+                    Saved as{' '}
+                    <Box component="span" sx={{ fontFamily: fonts.mono, color: 'text.primary' }}>
+                      {plate}
+                    </Box>{' '}
+                    · spaces and dashes are removed
+                  </>
+                ) : (
+                  'Spaces and dashes are removed'
+                ))
+              }
+              slotProps={monoInput}
+              onChange={(event) => set({ license_plate: event.target.value })}
+            />
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5 }}>
+              <TextField
+                label="Make"
+                required
+                value={form.make}
+                error={Boolean(errors.make)}
+                helperText={errors.make}
+                onChange={(event) => set({ make: event.target.value })}
+              />
+              <TextField
+                label="Model"
+                required
+                value={form.model}
+                error={Boolean(errors.model)}
+                helperText={errors.model}
+                onChange={(event) => set({ model: event.target.value })}
+              />
               <TextField
                 label="Year"
                 type="number"
@@ -90,17 +129,16 @@ export default function VehicleFormDialog({ vehicle, offices, onClose, onSaved }
                 value={form.year}
                 error={Boolean(errors.year)}
                 helperText={errors.year}
-                onChange={(event) => setForm({ ...form, year: Number(event.target.value) })}
+                onChange={(event) => set({ year: Number(event.target.value) })}
               />
               <TextField
                 select
                 label="Office"
                 required
-                fullWidth
                 value={form.office || ''}
                 error={Boolean(errors.office)}
                 helperText={errors.office}
-                onChange={(event) => setForm({ ...form, office: Number(event.target.value) })}
+                onChange={(event) => set({ office: Number(event.target.value) })}
               >
                 {offices.map((office) => (
                   <MenuItem key={office.id} value={office.id}>
@@ -108,22 +146,29 @@ export default function VehicleFormDialog({ vehicle, offices, onClose, onSaved }
                   </MenuItem>
                 ))}
               </TextField>
-            </Stack>
+            </Box>
             <FormControlLabel
               control={
-                <Switch
+                <Checkbox
                   checked={form.is_active}
-                  onChange={(event) => setForm({ ...form, is_active: event.target.checked })}
+                  onChange={(event) => set({ is_active: event.target.checked })}
                 />
               }
-              label="Active (in service)"
+              label="In service (active)"
             />
           </Stack>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose}>Cancel</Button>
+        <DialogActions sx={{ px: 3, py: 2, borderTop: 1, borderColor: 'divider' }}>
+          <Button
+            variant="outlined"
+            color="inherit"
+            onClick={onClose}
+            sx={{ borderColor: 'divider' }}
+          >
+            Cancel
+          </Button>
           <Button type="submit" variant="contained" loading={save.isPending}>
-            Save
+            Save vehicle
           </Button>
         </DialogActions>
       </form>
