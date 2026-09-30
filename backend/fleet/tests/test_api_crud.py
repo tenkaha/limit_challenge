@@ -50,10 +50,18 @@ class ApiTestCase(APITestCase):
 
 
 class OfficeApiTests(ApiTestCase):
-    def test_duplicate_name_and_city_returns_400_with_message(self) -> None:
+    def test_duplicate_name_and_city_error_is_on_name(self) -> None:
         response = self.client.post("/api/offices/", {"name": "Downtown", "city": "Austin"})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("already exists in this city", str(response.data))
+        self.assertEqual(
+            response.data, {"name": ["An office with this name already exists in this city."]}
+        )
+
+    def test_updating_office_does_not_conflict_with_itself(self) -> None:
+        response = self.client.put(
+            f"/api/offices/{self.office.pk}/", {"name": "Downtown", "city": "Austin"}
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_same_name_in_other_city_is_created(self) -> None:
         response = self.client.post("/api/offices/", {"name": "Downtown", "city": "Boston"})
@@ -73,6 +81,18 @@ class VehicleApiTests(ApiTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data["vin"], VIN)
         self.assertEqual(response.data["license_plate"], "ABC1234")
+
+    def test_duplicate_vin_message(self) -> None:
+        self.make_vehicle()
+        response = self.client.post("/api/vehicles/", self.vehicle_payload(license_plate="OTHER1"))
+        self.assertEqual(response.data["vin"], ["A vehicle with this VIN already exists."])
+
+    def test_plate_without_letters_or_digits_message(self) -> None:
+        response = self.client.post("/api/vehicles/", self.vehicle_payload(license_plate="- -"))
+        self.assertEqual(
+            response.data["license_plate"],
+            ["License plate must contain at least one letter or digit."],
+        )
 
     def test_invalid_vin_returns_field_error(self) -> None:
         response = self.client.post("/api/vehicles/", self.vehicle_payload(vin="1HGCM82633A00435O"))
@@ -152,8 +172,10 @@ class MechanicApiTests(ApiTestCase):
         response = self.client.post(
             "/api/mechanics/", {"name": "Bruno", "certification_number": " ASE-1 "}
         )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("certification_number", response.data)
+        self.assertEqual(
+            response.data["certification_number"],
+            ["A mechanic with this certification number already exists."],
+        )
 
     def test_delete_with_history_returns_409(self) -> None:
         self.make_record(self.make_vehicle())

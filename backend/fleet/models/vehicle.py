@@ -24,6 +24,7 @@ class Vehicle(TimeStampedModel):
         "VIN",
         max_length=17,
         unique=True,
+        error_messages={"unique": "A vehicle with this VIN already exists."},
         validators=[RegexValidator(VIN_PATTERN, "VIN must be 17 characters, excluding I, O, Q.")],
     )
     license_plate = models.CharField(
