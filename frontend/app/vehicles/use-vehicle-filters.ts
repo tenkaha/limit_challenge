@@ -1,8 +1,7 @@
 'use client';
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useMemo } from 'react';
-import { rememberVehicleSearch } from '@/lib/last-search';
+import { useCallback, useMemo } from 'react';
 import type { VehicleFilters } from '@/lib/types';
 
 export const FILTER_KEYS = [
@@ -14,6 +13,8 @@ export const FILTER_KEYS = [
   'maintenance_to',
   'mechanic_certification',
 ] as const satisfies readonly (keyof VehicleFilters)[];
+
+export type FilterKey = (typeof FILTER_KEYS)[number];
 
 // The URL is the single source of truth for the search, so it can be shared,
 // bookmarked, and survives refresh and back/forward.
@@ -45,10 +46,8 @@ export function useVehicleFilters() {
     [pathname, router, searchParams],
   );
 
-  useEffect(() => rememberVehicleSearch(searchParams.toString()), [searchParams]);
-
   const activeCount = FILTER_KEYS.filter((key) => filters[key]).length;
   const clear = useCallback(() => router.replace(pathname), [pathname, router]);
 
-  return { filters, setFilters, activeCount, clear };
+  return { filters, setFilters, activeCount, clear, query: searchParams.toString() };
 }

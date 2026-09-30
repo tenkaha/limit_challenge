@@ -1,27 +1,31 @@
 'use client';
 
 import {
+  Box,
   Button,
-  Chip,
   IconButton,
   Paper,
-  Snackbar,
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
-  TablePagination,
   TableRow,
   Tooltip,
+  Typography,
 } from '@mui/material';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
+import { fonts } from '@/app/theme';
 import ConfirmDialog from '@/components/confirm-dialog';
 import PageHeader from '@/components/page-header';
 import QueryState from '@/components/query-state';
+import StatusDot from '@/components/status-dot';
+import { useToast } from '@/components/toast';
 import { api } from '@/lib/api';
+import { errorMessage } from '@/lib/errors';
+import { rememberVehicleSearch } from '@/lib/last-search';
 import type { Vehicle } from '@/lib/types';
 import VehicleFiltersBar from './vehicle-filters';
 import VehicleFormDialog from './vehicle-form-dialog';
@@ -29,13 +33,20 @@ import { useVehicleFilters } from './use-vehicle-filters';
 
 const PAGE_SIZE = 10;
 
+function blockedDeleteDetail(error: unknown) {
+  const records = /(\d+) maintenance record/.exec(errorMessage(error))?.[1];
+  return records
+    ? `It has ${records} maintenance records. Mark it inactive instead.`
+    : errorMessage(error);
+}
+
 export default function VehiclesView() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { filters, setFilters, activeCount, clear } = useVehicleFilters();
+  const toast = useToast();
+  const { filters, setFilters, activeCount, clear, query } = useVehicleFilters();
   const [editing, setEditing] = useState<Vehicle | 'new' | null>(null);
   const [deleting, setDeleting] = useState<Vehicle | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
 
   const offices = useQuery({ queryKey: ['offices', 'list'], queryFn: api.offices.list });
   const vehicles = useQuery({
@@ -45,6 +56,12 @@ export default function VehiclesView() {
     // A 400 (e.g. from > to) won't fix itself by retrying.
     retry: false,
   });
+  // Same key as the unfiltered list, so it is shared with that page when cached.
+  const fleet = useQuery({
+    queryKey: ['vehicles', {}],
+    queryFn: () => api.vehicles.search({}),
+    enabled: activeCount > 0,
+  });
   const officeById = useMemo(
     () => new Map((offices.data?.results ?? []).map((office) => [office.id, office])),
     [offices.data],
@@ -52,25 +69,43 @@ export default function VehiclesView() {
 
   const remove = useMutation({
     mutationFn: (vehicle: Vehicle) => api.vehicles.remove(vehicle.id),
-    onSuccess: async () => {
-      setDeleting(null);
-      setToast('Vehicle deleted');
+    onSuccess: async (_data, vehicle) => {
+      toast.success('Vehicle deleted', `${vehicle.license_plate} was removed.`);
       await queryClient.invalidateQueries({ queryKey: ['vehicles'] });
     },
+    onError: (error, vehicle) =>
+      toast.error(`Can't delete ${vehicle.license_plate}`, blockedDeleteDetail(error)),
+    onSettled: () => setDeleting(null),
   });
 
   const page = Number(filters.page ?? '1');
   const rows = vehicles.data?.results ?? [];
+  const total = vehicles.data?.count ?? 0;
+  const first = total ? (page - 1) * PAGE_SIZE + 1 : 0;
+  const last = Math.min(page * PAGE_SIZE, total);
+  const subtitle = !vehicles.data
+    ? ' '
+    : activeCount
+      ? `${total} match your filters${fleet.data ? ` · ${fleet.data.count} in the fleet` : ''}`
+      : `${total} vehicles in the fleet`;
+
+  const openVehicle = (vehicle: Vehicle) => {
+    rememberVehicleSearch(query);
+    router.push(`/vehicles/${vehicle.id}`);
+  };
 
   return (
     <>
       <PageHeader
         title="Vehicles"
+        subtitle={subtitle}
         action={
           <Button
             variant="contained"
+            startIcon={<Plus size={16} />}
             onClick={() => setEditing('new')}
             disabled={!offices.data?.results.length}
+            sx={{ minHeight: 44 }}
           >
             New vehicle
           </Button>
@@ -79,7 +114,6 @@ export default function VehiclesView() {
       <VehicleFiltersBar
         filters={filters}
         offices={offices.data?.results ?? []}
-        activeCount={activeCount}
         onChange={setFilters}
         onClear={clear}
       />
@@ -94,12 +128,13 @@ export default function VehiclesView() {
             : 'No vehicles yet. Create the first one.'
         }
       >
-        <TableContainer
-          component={Paper}
+        <Paper
           variant="outlined"
-          sx={{ opacity: vehicles.isPlaceholderData ? 0.6 : 1 }}
+          component="section"
+          aria-label="Results"
+          sx={{ overflow: 'hidden', opacity: vehicles.isPlaceholderData ? 0.6 : 1 }}
         >
-          <Table size="small" aria-label="Vehicles">
+          <Table aria-label="Vehicles">
             <TableHead>
               <TableRow>
                 <TableCell>Plate</TableCell>
@@ -107,7 +142,11 @@ export default function VehiclesView() {
                 <TableCell>VIN</TableCell>
                 <TableCell>Office</TableCell>
                 <TableCell>Status</TableCell>
-                <TableCell align="right">Actions</TableCell>
+                <TableCell align="right">
+                  <Box component="span" sx={visuallyHidden}>
+                    Actions
+                  </Box>
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -118,41 +157,44 @@ export default function VehiclesView() {
                     key={vehicle.id}
                     hover
                     sx={{ cursor: 'pointer' }}
-                    onClick={() => router.push(`/vehicles/${vehicle.id}`)}
+                    onClick={() => openVehicle(vehicle)}
                   >
-                    <TableCell sx={{ fontFamily: 'monospace' }}>{vehicle.license_plate}</TableCell>
+                    <TableCell sx={{ fontFamily: fonts.mono, fontWeight: 500 }}>
+                      {vehicle.license_plate}
+                    </TableCell>
                     <TableCell>
                       {vehicle.year} {vehicle.make} {vehicle.model}
                     </TableCell>
-                    <TableCell sx={{ fontFamily: 'monospace', fontSize: 12 }}>
+                    <TableCell
+                      sx={{ fontFamily: fonts.mono, fontSize: 12, color: 'text.secondary' }}
+                    >
                       {vehicle.vin}
                     </TableCell>
-                    <TableCell>{office ? `${office.name} · ${office.city}` : '…'}</TableCell>
-                    <TableCell>
-                      <Chip
-                        size="small"
-                        label={vehicle.is_active ? 'Active' : 'Inactive'}
-                        color={vehicle.is_active ? 'success' : 'default'}
-                      />
+                    <TableCell sx={{ color: '#344054' }}>
+                      {office ? `${office.name} · ${office.city}` : '…'}
                     </TableCell>
-                    <TableCell align="right" onClick={(event) => event.stopPropagation()}>
+                    <TableCell>
+                      <StatusDot active={vehicle.is_active} />
+                    </TableCell>
+                    <TableCell
+                      align="right"
+                      sx={{ whiteSpace: 'nowrap', py: 0.5 }}
+                      onClick={(event) => event.stopPropagation()}
+                    >
                       <Tooltip title="Edit">
                         <IconButton
                           aria-label={`Edit ${vehicle.license_plate}`}
                           onClick={() => setEditing(vehicle)}
                         >
-                          ✎
+                          <Pencil size={18} />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Delete">
                         <IconButton
                           aria-label={`Delete ${vehicle.license_plate}`}
-                          onClick={() => {
-                            remove.reset();
-                            setDeleting(vehicle);
-                          }}
+                          onClick={() => setDeleting(vehicle)}
                         >
-                          🗑
+                          <Trash2 size={18} />
                         </IconButton>
                       </Tooltip>
                     </TableCell>
@@ -161,15 +203,42 @@ export default function VehiclesView() {
               })}
             </TableBody>
           </Table>
-          <TablePagination
-            component="div"
-            count={vehicles.data?.count ?? 0}
-            page={page - 1}
-            rowsPerPage={PAGE_SIZE}
-            rowsPerPageOptions={[PAGE_SIZE]}
-            onPageChange={(_event, next) => setFilters({ page: next ? String(next + 1) : '' })}
-          />
-        </TableContainer>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              px: 2,
+              py: 1.5,
+            }}
+          >
+            <Typography fontSize={13} color="text.secondary">
+              Showing {first}–{last} of {total}
+            </Typography>
+            <Box display="flex" gap={1}>
+              <Button
+                variant="outlined"
+                color="inherit"
+                size="small"
+                disabled={page <= 1}
+                onClick={() => setFilters({ page: page > 2 ? String(page - 1) : '' })}
+                sx={{ borderColor: 'divider' }}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outlined"
+                color="inherit"
+                size="small"
+                disabled={!vehicles.data?.next}
+                onClick={() => setFilters({ page: String(page + 1) })}
+                sx={{ borderColor: 'divider' }}
+              >
+                Next
+              </Button>
+            </Box>
+          </Box>
+        </Paper>
       </QueryState>
 
       {editing ? (
@@ -177,31 +246,32 @@ export default function VehiclesView() {
           vehicle={editing === 'new' ? null : editing}
           offices={offices.data?.results ?? []}
           onClose={() => setEditing(null)}
-          onSaved={(message) => {
+          onSaved={(saved, created) => {
             setEditing(null);
-            setToast(message);
+            toast.success(
+              created ? 'Vehicle created' : 'Vehicle updated',
+              `${saved.license_plate} · ${saved.year} ${saved.make} ${saved.model}`,
+            );
           }}
         />
       ) : null}
       <ConfirmDialog
         open={deleting !== null}
-        title="Delete vehicle?"
-        message={
-          deleting
-            ? `${deleting.license_plate} will be permanently deleted. Vehicles with maintenance history can't be deleted; mark them inactive instead.`
-            : ''
-        }
+        title={deleting ? `Delete ${deleting.license_plate}?` : ''}
+        message="This can't be undone. Vehicles with maintenance history can't be deleted; mark them inactive instead."
         isPending={remove.isPending}
-        error={remove.error}
+        error={null}
         onConfirm={() => deleting && remove.mutate(deleting)}
         onClose={() => setDeleting(null)}
-      />
-      <Snackbar
-        open={toast !== null}
-        autoHideDuration={3000}
-        onClose={() => setToast(null)}
-        message={toast}
       />
     </>
   );
 }
+
+const visuallyHidden = {
+  position: 'absolute',
+  width: 1,
+  height: 1,
+  overflow: 'hidden',
+  clip: 'rect(0 0 0 0)',
+} as const;
