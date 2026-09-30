@@ -19,11 +19,12 @@ import {
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import ConfirmDialog from '@/components/confirm-dialog';
 import QueryState from '@/components/query-state';
 import { api } from '@/lib/api';
+import { vehiclesListHref } from '@/lib/last-search';
 import { formatDate, formatMoney } from '@/lib/format';
 import { MAINTENANCE_TYPES, type MaintenanceHistoryItem } from '@/lib/types';
 import AssignOffice from './assign-office';
@@ -33,6 +34,7 @@ type Editing = { record: MaintenanceHistoryItem | null } | null;
 
 export default function VehicleDetailPage() {
   const vehicleId = Number(useParams<{ id: string }>().id);
+  const router = useRouter();
   const queryClient = useQueryClient();
   const vehicle = useQuery({
     queryKey: ['vehicle', vehicleId],
@@ -58,7 +60,15 @@ export default function VehicleDetailPage() {
   return (
     <Stack spacing={3}>
       <Box>
-        <Button component={Link} href="/vehicles" size="small">
+        <Button
+          component={Link}
+          href="/vehicles"
+          size="small"
+          onClick={(event) => {
+            event.preventDefault();
+            router.push(vehiclesListHref());
+          }}
+        >
           ← Back to vehicles
         </Button>
       </Box>
