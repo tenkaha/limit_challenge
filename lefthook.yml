@@ -10,6 +10,15 @@ pre-commit:
       glob: "*.py"
       run: .venv/bin/ruff check --fix {staged_files}
       stage_fixed: true
+    frontend-format:
+      root: frontend/
+      glob: "*.{ts,tsx,js,mjs,json,css}"
+      run: npx prettier --write {staged_files}
+      stage_fixed: true
+    frontend-lint:
+      root: frontend/
+      glob: "*.{ts,tsx}"
+      run: npx eslint {staged_files}
 
 pre-push:
   parallel: true
@@ -20,6 +29,9 @@ pre-push:
     test:
       root: backend/
       run: .venv/bin/python -W error -m coverage run manage.py test && .venv/bin/coverage report
+    frontend-typecheck:
+      root: frontend/
+      run: npm run -s typecheck
 
 commit-msg:
   commands:

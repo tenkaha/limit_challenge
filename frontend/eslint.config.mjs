@@ -17,6 +17,17 @@ const eslintConfig = defineConfig([
       'prettier/prettier': 'error',
     },
   },
+  {
+    name: 'strict',
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/consistent-type-imports': 'error',
+      'react-hooks/exhaustive-deps': 'error',
+      eqeqeq: 'error',
+      'no-console': 'error',
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
