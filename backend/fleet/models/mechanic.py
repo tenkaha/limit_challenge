@@ -6,8 +6,8 @@ from fleet.models.base import TimeStampedModel
 
 
 class Mechanic(TimeStampedModel):
-    name = models.CharField(max_length=120)
-    certification_number = models.CharField(max_length=32, unique=True)
+    name = models.CharField(max_length=255)
+    certification_number = models.CharField(max_length=64, unique=True)
     is_active = models.BooleanField(default=True)
 
     class Meta:

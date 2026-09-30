@@ -19,9 +19,9 @@ class Vehicle(TimeStampedModel):
         unique=True,
         validators=[RegexValidator(VIN_PATTERN, "VIN must be 17 characters, excluding I, O, Q.")],
     )
-    license_plate = models.CharField(max_length=16)
-    make = models.CharField(max_length=64)
-    model = models.CharField(max_length=64)
+    license_plate = models.CharField(max_length=20)
+    make = models.CharField(max_length=255)
+    model = models.CharField(max_length=255)
     year = models.PositiveSmallIntegerField(validators=[MinValueValidator(FIRST_MODEL_YEAR)])
     office = models.ForeignKey(Office, on_delete=models.PROTECT, related_name="vehicles")
     is_active = models.BooleanField(default=True)

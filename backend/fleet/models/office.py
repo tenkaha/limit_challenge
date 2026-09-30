@@ -6,8 +6,8 @@ from fleet.models.base import TimeStampedModel
 
 
 class Office(TimeStampedModel):
-    name = models.CharField(max_length=120, unique=True)
-    city = models.CharField(max_length=120)
+    name = models.CharField(max_length=255, unique=True)
+    city = models.CharField(max_length=255)
 
     class Meta:
         ordering = ("name",)
