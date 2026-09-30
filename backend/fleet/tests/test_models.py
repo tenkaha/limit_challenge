@@ -37,6 +37,15 @@ class ModelTestCase(TestCase):
         return Vehicle.objects.create(**fields)
 
 
+class OfficeConstraintTests(ModelTestCase):
+    def test_same_name_allowed_in_different_city(self) -> None:
+        Office.objects.create(name="New York", city="Albany")
+
+    def test_same_name_and_city_rejected(self) -> None:
+        with transaction.atomic(), self.assertRaises(IntegrityError):
+            Office.objects.create(name="New York", city="New York")
+
+
 class VehicleConstraintTests(ModelTestCase):
     def test_vin_is_unique(self) -> None:
         self.make_vehicle()
@@ -70,9 +79,14 @@ class VehicleConstraintTests(ModelTestCase):
             with self.subTest(vin=vin), transaction.atomic(), self.assertRaises(IntegrityError):
                 self.make_vehicle(vin=vin)
 
-    def test_lowercase_plate_rejected_by_database(self) -> None:
-        with transaction.atomic(), self.assertRaises(IntegrityError):
-            self.make_vehicle(license_plate="abc1234")
+    def test_non_normalized_plate_rejected_by_database(self) -> None:
+        for plate in ("abc1234", "ABC-1234", "ABC 1234"):
+            with (
+                self.subTest(plate=plate),
+                transaction.atomic(),
+                self.assertRaises(IntegrityError),
+            ):
+                self.make_vehicle(license_plate=plate)
 
     def test_year_before_first_car_rejected(self) -> None:
         with transaction.atomic(), self.assertRaises(IntegrityError):
