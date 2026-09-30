@@ -27,6 +27,18 @@ The API lives at `http://localhost:8000/api/`.
 | Mechanics `Idle Ivy` (active, no work) and `Retired Rex` (inactive, worked this year) | both appear in the workload |
 | Office `Empty Lot` | 0 vehicles, 0 cost, no last maintenance |
 
+### Frontend
+
+With the backend running on port 8000:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open `http://localhost:3000`. To use a different API address, set `NEXT_PUBLIC_API_BASE_URL` (default `http://localhost:8000/api`).
+
 ## Test
 
 ```bash
@@ -41,6 +53,8 @@ coverage run manage.py test && coverage report   # fails below 90%
 ruff format --check . && ruff check .
 mypy .
 ```
+
+For the frontend, `npm run format`, `npm run lint`, `npm run typecheck` and `npm run build`.
 
 CI runs these checks on every pull request, and `main` rejects merges that fail them. `lefthook install` adds the same checks as git hooks.
 
