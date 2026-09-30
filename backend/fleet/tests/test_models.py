@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError
 from django.test import TestCase
+from django.utils import timezone
 
 from fleet.models import MaintenanceRecord, MaintenanceType, Mechanic, Office, Vehicle
 
@@ -120,6 +121,17 @@ class MaintenanceRecordConstraintTests(ModelTestCase):
             cost=Decimal("300.00"),
         )
         self.assertEqual(list(MaintenanceRecord.objects.all()), [newer, older])
+
+
+class TimeStampTests(ModelTestCase):
+    def test_created_at_defaults_to_aware_now(self) -> None:
+        self.assertTrue(timezone.is_aware(self.office.created_at))
+
+    def test_explicit_created_at_is_kept(self) -> None:
+        past = timezone.now() - datetime.timedelta(days=200)
+        office = Office.objects.create(name="Austin", city="Austin", created_at=past)
+        office.refresh_from_db()
+        self.assertEqual(office.created_at, past)
 
 
 class StrTests(ModelTestCase):
