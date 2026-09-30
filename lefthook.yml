@@ -1,0 +1,33 @@
+pre-commit:
+  commands:
+    ruff-format:
+      root: backend/
+      glob: "*.py"
+      run: .venv/bin/ruff format {staged_files}
+      stage_fixed: true
+    ruff-check:
+      root: backend/
+      glob: "*.py"
+      run: .venv/bin/ruff check --fix {staged_files}
+      stage_fixed: true
+
+pre-push:
+  parallel: true
+  commands:
+    mypy:
+      root: backend/
+      run: .venv/bin/mypy .
+    pytest:
+      root: backend/
+      run: .venv/bin/pytest -q
+
+commit-msg:
+  commands:
+    conventional:
+      run: |
+        msg=$(grep -v '^#' {1} | sed '/^$/d')
+        if [ "$(printf '%s\n' "$msg" | wc -l)" -ne 1 ]; then
+          echo "Commit message must be exactly one line"; exit 1
+        fi
+        printf '%s' "$msg" | grep -Eq '^(feat|fix|chore|docs|style|refactor|perf|test|build|ci|revert)(\([a-z0-9-]+\))?!?: .+' \
+          || { echo "Commit message must follow Conventional Commits"; exit 1; }
