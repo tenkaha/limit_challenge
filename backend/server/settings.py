@@ -129,9 +129,8 @@ STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REST_FRAMEWORK = {
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "PAGE_SIZE": 10,
-    "DEFAULT_FILTER_BACKENDS": [],
+    "DEFAULT_PAGINATION_CLASS": "fleet.pagination.DefaultPagination",
+    "DEFAULT_FILTER_BACKENDS": ["rest_framework.filters.OrderingFilter"],
     "EXCEPTION_HANDLER": "fleet.exceptions.api_exception_handler",
     "COERCE_DECIMAL_TO_STRING": False,
     "TEST_REQUEST_DEFAULT_FORMAT": "json",

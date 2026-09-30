@@ -17,6 +17,7 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "**/tests/**" = ["PLR2004"]
 "manage.py" = ["PLC0415", "TRY003", "EM101"]
+"fleet/views.py" = ["ARG002"]  # DRF actions must accept request/pk
 
 [tool.ruff.lint.flake8-type-checking]
 runtime-evaluated-base-classes = ["django.db.models.Model", "rest_framework.serializers.Serializer"]
