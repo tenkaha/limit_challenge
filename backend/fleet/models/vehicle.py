@@ -60,7 +60,6 @@ class Vehicle(TimeStampedModel):
                 name="vehicle_year_min",
             ),
         )
-        indexes = (models.Index(fields=("make", "model"), name="vehicle_make_model_idx"),)
 
     @override
     def __str__(self) -> str:
