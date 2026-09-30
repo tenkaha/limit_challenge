@@ -19,11 +19,13 @@ class MaintenanceType(models.TextChoices):
 
 
 class MaintenanceRecord(TimeStampedModel):
+    # db_index=False: the composite indexes in Meta lead with these FK columns,
+    # so Django's implicit single-column FK indexes would be redundant.
     vehicle = models.ForeignKey(
-        Vehicle, on_delete=models.PROTECT, related_name="maintenance_records"
+        Vehicle, on_delete=models.PROTECT, related_name="maintenance_records", db_index=False
     )
     mechanic = models.ForeignKey(
-        Mechanic, on_delete=models.PROTECT, related_name="maintenance_records"
+        Mechanic, on_delete=models.PROTECT, related_name="maintenance_records", db_index=False
     )
     performed_on = models.DateField()
     maintenance_type = models.CharField(max_length=32, choices=MaintenanceType.choices)
