@@ -12,6 +12,7 @@ VIN_PATTERN = r"^[A-HJ-NPR-Z0-9]{17}$"
 PLATE_PATTERN = r"^[A-Z0-9]+$"
 FIRST_MODEL_YEAR = 1886
 
+PLATE_TAKEN_MESSAGE = "An active vehicle with this license plate already exists."
 plate_format_validator = RegexValidator(
     PLATE_PATTERN, "License plate must contain only A-Z and 0-9."
 )
@@ -43,7 +44,7 @@ class Vehicle(TimeStampedModel):
                 name="uniq_active_vehicle_license_plate",
                 # "unique" makes Django attach the error to the license_plate field.
                 violation_error_code="unique",
-                violation_error_message="An active vehicle with this license plate already exists.",
+                violation_error_message=PLATE_TAKEN_MESSAGE,
             ),
             models.CheckConstraint(
                 condition=models.Q(vin__regex=VIN_PATTERN),
