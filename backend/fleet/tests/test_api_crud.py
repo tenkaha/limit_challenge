@@ -150,6 +150,7 @@ class VehicleApiTests(ApiTestCase):
         self.assertEqual(
             response.data["detail"], "Cannot delete: it is referenced by 2 maintenance records."
         )
+        self.assertEqual(response.data["blocked_count"], 2)
 
     def test_is_active_filter(self) -> None:
         self.make_vehicle()
@@ -181,6 +182,13 @@ class MechanicApiTests(ApiTestCase):
         self.make_record(self.make_vehicle())
         response = self.client.delete(f"/api/mechanics/{self.mechanic.pk}/")
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(
+            response.data,
+            {
+                "detail": "Cannot delete: it is referenced by 1 maintenance record.",
+                "blocked_count": 1,
+            },
+        )
 
 
 class MaintenanceRecordApiTests(ApiTestCase):

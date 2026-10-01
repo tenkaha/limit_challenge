@@ -42,7 +42,10 @@ describe('VehiclesView', () => {
     server.use(
       http.delete(`${API}/vehicles/10/`, () =>
         HttpResponse.json(
-          { detail: 'Cannot delete: it is referenced by 183 maintenance records.' },
+          {
+            detail: 'Cannot delete: it is referenced by 183 maintenance records.',
+            blocked_count: 183,
+          },
           { status: 409 },
         ),
       ),
