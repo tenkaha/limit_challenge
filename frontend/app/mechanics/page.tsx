@@ -1,14 +1,9 @@
 'use client';
 
 import {
-  Alert,
   Box,
   Button,
   Checkbox,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   FormControlLabel,
   IconButton,
   Paper,
@@ -33,11 +28,12 @@ import LabeledInput from '@/components/labeled-input';
 import PageHeader from '@/components/page-header';
 import QueryState from '@/components/query-state';
 import StatusDot from '@/components/status-dot';
+import FormDialog from '@/components/form-dialog';
 import { useToast } from '@/components/toast';
 import { api } from '@/lib/api';
 import { invalidate, queries } from '@/lib/queries';
 import { blockedMessage } from '@/lib/blocked';
-import { fieldErrors, generalError } from '@/lib/errors';
+import { fieldErrors } from '@/lib/errors';
 import { formatMoney, plural } from '@/lib/format';
 import type { Mechanic, MechanicInput, Page } from '@/lib/types';
 import { tabular, visuallyHidden } from '@/lib/sx';
@@ -337,59 +333,45 @@ function MechanicDialog({
     },
   });
   const errors = fieldErrors(save.error);
-  const otherError = generalError(save.error);
 
   return (
-    <Dialog open onClose={onClose} maxWidth="xs" fullWidth>
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          save.mutate(form);
-        }}
-      >
-        <DialogTitle sx={{ fontSize: 18, fontWeight: 600 }}>
-          {mechanic ? 'Edit mechanic' : 'New mechanic'}
-        </DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} mt={0.5}>
-            {otherError ? <Alert severity="error">{otherError}</Alert> : null}
-            <LabeledInput
-              id="mechanic-name"
-              label="Name"
-              value={form.name}
-              error={errors.name}
-              autoFocus
-              onChange={(name) => setForm({ ...form, name })}
-            />
-            <LabeledInput
-              id="mechanic-certification"
-              label="Certification number"
-              value={form.certification_number}
-              error={errors.certification_number}
-              mono
-              onChange={(certification_number) => setForm({ ...form, certification_number })}
-            />
-            <FormControlLabel
-              sx={{ minHeight: 44 }}
-              control={
-                <Checkbox
-                  checked={form.is_active}
-                  onChange={(event) => setForm({ ...form, is_active: event.target.checked })}
-                />
-              }
-              label="Active (currently working)"
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button variant="outlined" color="inherit" onClick={onClose} sx={{ minHeight: 44 }}>
-            Cancel
-          </Button>
-          <Button type="submit" variant="contained" loading={save.isPending} sx={{ minHeight: 44 }}>
-            Save mechanic
-          </Button>
-        </DialogActions>
-      </form>
-    </Dialog>
+    <FormDialog
+      title={mechanic ? 'Edit mechanic' : 'New mechanic'}
+      submitLabel="Save mechanic"
+      size="xs"
+      error={save.error}
+      isPending={save.isPending}
+      onSubmit={() => {
+        save.mutate(form);
+      }}
+      onClose={onClose}
+    >
+      <LabeledInput
+        id="mechanic-name"
+        label="Name"
+        value={form.name}
+        error={errors.name}
+        autoFocus
+        onChange={(name) => setForm({ ...form, name })}
+      />
+      <LabeledInput
+        id="mechanic-certification"
+        label="Certification number"
+        value={form.certification_number}
+        error={errors.certification_number}
+        mono
+        onChange={(certification_number) => setForm({ ...form, certification_number })}
+      />
+      <FormControlLabel
+        sx={{ minHeight: 44 }}
+        control={
+          <Checkbox
+            checked={form.is_active}
+            onChange={(event) => setForm({ ...form, is_active: event.target.checked })}
+          />
+        }
+        label="Active (currently working)"
+      />
+    </FormDialog>
   );
 }
