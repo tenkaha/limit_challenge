@@ -83,6 +83,11 @@ export const theme = createTheme({
     MuiDialog: {
       styleOverrides: { paper: { borderRadius: 14 } },
     },
+    MuiDialogActions: {
+      styleOverrides: {
+        root: { padding: '16px 24px', borderTop: `1px solid ${colors.border}` },
+      },
+    },
     MuiTab: {
       styleOverrides: { root: { textTransform: 'none', fontSize: 14, minHeight: 44 } },
     },

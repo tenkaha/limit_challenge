@@ -169,7 +169,7 @@ export default function RecordDialog({ vehicleId, record, onClose, onSaved }: Re
             </LabeledField>
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2, borderTop: 1, borderColor: 'divider' }}>
+        <DialogActions>
           <Button
             variant="outlined"
             color="inherit"
