@@ -32,6 +32,9 @@ pre-push:
     frontend-typecheck:
       root: frontend/
       run: npm run -s typecheck
+    frontend-test:
+      root: frontend/
+      run: npm test --silent
 
 commit-msg:
   commands:

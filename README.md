@@ -54,7 +54,7 @@ ruff format --check . && ruff check .
 mypy .
 ```
 
-For the frontend, `npm run format`, `npm run lint`, `npm run typecheck` and `npm run build`.
+For the frontend, `npm test` runs the Vitest suite (Testing Library, with MSW as a fake API, so no backend is needed). `npm run format`, `npm run lint`, `npm run typecheck` and `npm run build` cover the rest.
 
 CI runs these checks on every pull request, and `main` rejects merges that fail them. `lefthook install` adds the same checks as git hooks.
 
