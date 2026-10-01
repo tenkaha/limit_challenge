@@ -61,9 +61,9 @@ export default function VehiclesView() {
     // A 400 (e.g. from > to) won't fix itself by retrying.
     retry: false,
   });
-  // Same key as the unfiltered list, so it is shared with that page when cached.
+  // Only the total is needed, so ask for one row instead of a full page.
   const fleet = useQuery({
-    ...queries.vehicleSearch({}),
+    ...queries.vehicleSearch({ page_size: '1' }),
     enabled: activeCount > 0,
   });
   const officeById = useMemo(

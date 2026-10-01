@@ -28,6 +28,22 @@ describe('VehiclesView', () => {
     expect(searched).toContain('toyota');
   });
 
+  it('asks for a single row when it only needs the fleet total', async () => {
+    const unfiltered: (string | null)[] = [];
+    server.use(
+      http.get(`${API}/vehicles/`, ({ request }) => {
+        const params = new URL(request.url).searchParams;
+        if (!params.get('make')) unfiltered.push(params.get('page_size'));
+        return HttpResponse.json({ ...page([vehicle()]), count: params.get('make') ? 1 : 605 });
+      }),
+    );
+    setUrl('/vehicles?make=ford');
+    renderWithProviders(<VehiclesView />);
+
+    expect(await screen.findByText('1 match your filters · 605 in the fleet')).toBeInTheDocument();
+    expect(unfiltered).toEqual(['1']);
+  });
+
   it('removes only the filter whose chip is deleted', async () => {
     setUrl('/vehicles?make=ford&model=escape');
     renderWithProviders(<VehiclesView />);
