@@ -35,6 +35,7 @@ import QueryState from '@/components/query-state';
 import StatusDot from '@/components/status-dot';
 import { useToast } from '@/components/toast';
 import { api } from '@/lib/api';
+import { invalidate, queries } from '@/lib/queries';
 import { blockedCount } from '@/lib/blocked';
 import { errorMessage, fieldErrors } from '@/lib/errors';
 import { formatMoney } from '@/lib/format';
@@ -47,7 +48,7 @@ export default function MechanicsPage() {
   const toast = useToast();
   const [tab, setTab] = useState<'workload' | 'list'>('workload');
   const [editing, setEditing] = useState<Mechanic | 'new' | null>(null);
-  const list = useQuery({ queryKey: ['mechanics', 'list'], queryFn: api.mechanics.list });
+  const list = useQuery(queries.mechanicList());
   const year = new Date().getFullYear();
 
   return (
@@ -105,10 +106,7 @@ export default function MechanicsPage() {
 }
 
 function Workload({ mechanics }: { mechanics: Mechanic[] }) {
-  const workload = useQuery({
-    queryKey: ['mechanics', 'workload'],
-    queryFn: api.mechanics.workload,
-  });
+  const workload = useQuery(queries.mechanicWorkload());
   const rows = workload.data ?? [];
   const inactive = useMemo(
     () => new Set(mechanics.filter((m) => !m.is_active).map((m) => m.id)),
@@ -228,7 +226,7 @@ function MechanicList({
     onSuccess: async (_data, mechanic) => {
       setDeleting(null);
       onDeleted(mechanic.name);
-      await queryClient.invalidateQueries({ queryKey: ['mechanics'] });
+      await invalidate.mechanics(queryClient);
     },
     onError: (error, mechanic) => {
       setDeleting(null);
@@ -337,7 +335,7 @@ function MechanicDialog({
     mutationFn: (input: MechanicInput) =>
       mechanic ? api.mechanics.update(mechanic.id, input) : api.mechanics.create(input),
     onSuccess: async (saved) => {
-      await queryClient.invalidateQueries({ queryKey: ['mechanics'] });
+      await invalidate.mechanics(queryClient);
       onSaved(mechanic ? 'Mechanic updated' : 'Mechanic created', saved.name);
     },
   });

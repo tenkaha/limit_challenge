@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useToast } from '@/components/toast';
 import { api } from '@/lib/api';
+import { invalidate, queries } from '@/lib/queries';
 import { errorMessage } from '@/lib/errors';
 import type { Id, Office } from '@/lib/types';
 
@@ -17,7 +18,7 @@ interface AssignOfficeProps {
 export default function AssignOffice({ vehicleId, office }: AssignOfficeProps) {
   const queryClient = useQueryClient();
   const toast = useToast();
-  const offices = useQuery({ queryKey: ['offices'], queryFn: api.offices.list });
+  const offices = useQuery(queries.officeList());
   const [target, setTarget] = useState(String(office.id));
 
   const assign = useMutation({
@@ -25,10 +26,7 @@ export default function AssignOffice({ vehicleId, office }: AssignOfficeProps) {
     onSuccess: async () => {
       const moved = offices.data?.results.find((option) => String(option.id) === target);
       toast.success('Vehicle moved', moved ? `Now at ${moved.name}` : undefined);
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['vehicle', vehicleId] }),
-        queryClient.invalidateQueries({ queryKey: ['vehicles'] }),
-      ]);
+      await invalidate.vehicles(queryClient);
     },
     onError: (error) => toast.error("Couldn't move vehicle", errorMessage(error)),
   });

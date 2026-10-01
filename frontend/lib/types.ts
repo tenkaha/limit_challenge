@@ -84,6 +84,7 @@ export interface VehicleFilters {
   maintenance_to?: string;
   mechanic_certification?: string;
   page?: string;
+  page_size?: string;
 }
 
 export type VehicleInput = Omit<Vehicle, 'id'>;

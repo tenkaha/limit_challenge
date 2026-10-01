@@ -1,7 +1,8 @@
 'use client';
 
-import { FormHelperText, OutlinedInput, Stack, Typography } from '@mui/material';
+import { TextField } from '@mui/material';
 import { fonts } from '@/app/theme';
+import LabeledField from './labeled-field';
 
 interface Props {
   id: string;
@@ -13,7 +14,6 @@ interface Props {
   onChange: (value: string) => void;
 }
 
-// Label above a 44px input, error text below it: the dialog field style.
 export default function LabeledInput({
   id,
   label,
@@ -24,21 +24,17 @@ export default function LabeledInput({
   onChange,
 }: Props) {
   return (
-    <Stack spacing={0.75}>
-      <Typography component="label" htmlFor={id} fontSize={13} fontWeight={500} color="#344054">
-        {label}
-      </Typography>
-      <OutlinedInput
+    <LabeledField htmlFor={id} label={label} required>
+      <TextField
         id={id}
         value={value}
         required
         autoFocus={autoFocus}
         error={Boolean(error)}
-        aria-invalid={Boolean(error)}
+        helperText={error}
         onChange={(event) => onChange(event.target.value)}
-        sx={{ height: 44, fontFamily: mono ? fonts.mono : undefined }}
+        slotProps={{ htmlInput: { style: mono ? { fontFamily: fonts.mono } : undefined } }}
       />
-      {error ? <FormHelperText error>{error}</FormHelperText> : null}
-    </Stack>
+    </LabeledField>
   );
 }

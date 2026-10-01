@@ -34,7 +34,7 @@ export default function RootLayout({
         <AppRouterCacheProvider options={{ enableCssLayer: true }}>
           <Providers>
             <NavBar />
-            <main className="mx-auto w-full max-w-[1180px] px-8 py-8">{children}</main>
+            <main className="mx-auto w-full max-w-[1180px] px-4 py-8 sm:px-8">{children}</main>
           </Providers>
         </AppRouterCacheProvider>
       </body>

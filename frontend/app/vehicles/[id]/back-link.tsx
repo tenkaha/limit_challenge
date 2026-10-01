@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { MouseEvent } from 'react';
 import { useSyncExternalStore } from 'react';
-import { api } from '@/lib/api';
+import { queries } from '@/lib/queries';
 import { vehiclesListHref } from '@/lib/last-search';
 
 const noSubscribe = () => () => {};
@@ -40,7 +40,7 @@ export default function BackLink() {
   // sessionStorage only exists in the browser; the server snapshot keeps the
   // first render identical to the server HTML, with no effect needed.
   const href = useSyncExternalStore(noSubscribe, vehiclesListHref, () => '/vehicles');
-  const offices = useQuery({ queryKey: ['offices'], queryFn: api.offices.list });
+  const offices = useQuery(queries.officeList());
   const query = new URLSearchParams(href.split('?')[1] ?? '');
   const summary = describeSearch(
     query,

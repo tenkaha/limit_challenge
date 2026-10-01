@@ -29,6 +29,7 @@ import PageHeader from '@/components/page-header';
 import QueryState from '@/components/query-state';
 import { useToast } from '@/components/toast';
 import { api } from '@/lib/api';
+import { invalidate, queries } from '@/lib/queries';
 import { blockedCount } from '@/lib/blocked';
 import { errorMessage, fieldErrors } from '@/lib/errors';
 import { formatDate, formatMoney } from '@/lib/format';
@@ -46,7 +47,7 @@ function windowStart(): string {
 export default function OfficesPage() {
   const queryClient = useQueryClient();
   const toast = useToast();
-  const summary = useQuery({ queryKey: ['offices', 'summary'], queryFn: api.offices.summary });
+  const summary = useQuery(queries.officeSummary());
   const [editing, setEditing] = useState<Office | 'new' | null>(null);
   const [deleting, setDeleting] = useState<OfficeSummary | null>(null);
 
@@ -55,7 +56,7 @@ export default function OfficesPage() {
     onSuccess: async (_data, office) => {
       setDeleting(null);
       toast.success('Office deleted', office.name);
-      await queryClient.invalidateQueries({ queryKey: ['offices'] });
+      await invalidate.offices(queryClient);
     },
     onError: (error, office) => {
       setDeleting(null);
@@ -205,7 +206,7 @@ function OfficeDialog({
     mutationFn: (input: OfficeInput) =>
       office ? api.offices.update(office.id, input) : api.offices.create(input),
     onSuccess: async (saved) => {
-      await queryClient.invalidateQueries({ queryKey: ['offices'] });
+      await invalidate.offices(queryClient);
       onSaved(office ? 'Office updated' : 'Office created', saved.name);
     },
   });

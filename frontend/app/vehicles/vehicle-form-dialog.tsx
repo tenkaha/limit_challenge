@@ -17,7 +17,9 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { fonts } from '@/app/theme';
+import LabeledField from '@/components/labeled-field';
 import { api } from '@/lib/api';
+import { invalidate } from '@/lib/queries';
 import { errorMessage, fieldErrors } from '@/lib/errors';
 import { normalizePlate } from '@/lib/normalize';
 import type { Office, Vehicle, VehicleInput } from '@/lib/types';
@@ -50,8 +52,7 @@ export default function VehicleFormDialog({ vehicle, offices, onClose, onSaved }
     mutationFn: (input: VehicleInput) =>
       vehicle ? api.vehicles.update(vehicle.id, input) : api.vehicles.create(input),
     onSuccess: async (saved) => {
-      await queryClient.invalidateQueries({ queryKey: ['vehicles'] });
-      await queryClient.invalidateQueries({ queryKey: ['vehicle', saved.id] });
+      await invalidate.vehicles(queryClient);
       onSaved(saved, vehicle === null);
     },
   });
@@ -74,78 +75,91 @@ export default function VehicleFormDialog({ vehicle, offices, onClose, onSaved }
         <DialogContent>
           <Stack spacing={2} mt={1}>
             {generalError ? <Alert severity="error">{errorMessage(save.error)}</Alert> : null}
-            <TextField
-              label="VIN"
-              required
-              value={form.vin}
-              error={Boolean(errors.vin)}
-              helperText={errors.vin ?? '17 characters, no I, O or Q'}
-              slotProps={monoInput}
-              onChange={(event) => set({ vin: event.target.value })}
-            />
-            <TextField
-              label="License plate"
-              required
-              value={form.license_plate}
-              error={Boolean(errors.license_plate)}
-              helperText={
-                errors.license_plate ??
-                (plate ? (
-                  <>
-                    Saved as{' '}
-                    <Box component="span" sx={{ fontFamily: fonts.mono, color: 'text.primary' }}>
-                      {plate}
-                    </Box>{' '}
-                    · spaces and dashes are removed
-                  </>
-                ) : (
-                  'Spaces and dashes are removed'
-                ))
-              }
-              slotProps={monoInput}
-              onChange={(event) => set({ license_plate: event.target.value })}
-            />
+            <LabeledField htmlFor="vehicle-vin" label="VIN" required>
+              <TextField
+                id="vehicle-vin"
+                required
+                value={form.vin}
+                error={Boolean(errors.vin)}
+                helperText={errors.vin ?? '17 characters, no I, O or Q'}
+                slotProps={monoInput}
+                onChange={(event) => set({ vin: event.target.value })}
+              />
+            </LabeledField>
+            <LabeledField htmlFor="vehicle-plate" label="License plate" required>
+              <TextField
+                id="vehicle-plate"
+                required
+                value={form.license_plate}
+                error={Boolean(errors.license_plate)}
+                helperText={
+                  errors.license_plate ??
+                  (plate ? (
+                    <>
+                      Saved as{' '}
+                      <Box component="span" sx={{ fontFamily: fonts.mono, color: 'text.primary' }}>
+                        {plate}
+                      </Box>{' '}
+                      · spaces and dashes are removed
+                    </>
+                  ) : (
+                    'Spaces and dashes are removed'
+                  ))
+                }
+                slotProps={monoInput}
+                onChange={(event) => set({ license_plate: event.target.value })}
+              />
+            </LabeledField>
             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5 }}>
-              <TextField
-                label="Make"
-                required
-                value={form.make}
-                error={Boolean(errors.make)}
-                helperText={errors.make}
-                onChange={(event) => set({ make: event.target.value })}
-              />
-              <TextField
-                label="Model"
-                required
-                value={form.model}
-                error={Boolean(errors.model)}
-                helperText={errors.model}
-                onChange={(event) => set({ model: event.target.value })}
-              />
-              <TextField
-                label="Year"
-                type="number"
-                required
-                value={form.year}
-                error={Boolean(errors.year)}
-                helperText={errors.year}
-                onChange={(event) => set({ year: Number(event.target.value) })}
-              />
-              <TextField
-                select
-                label="Office"
-                required
-                value={form.office || ''}
-                error={Boolean(errors.office)}
-                helperText={errors.office}
-                onChange={(event) => set({ office: Number(event.target.value) })}
-              >
-                {offices.map((office) => (
-                  <MenuItem key={office.id} value={office.id}>
-                    {office.name} · {office.city}
-                  </MenuItem>
-                ))}
-              </TextField>
+              <LabeledField htmlFor="vehicle-make" label="Make" required>
+                <TextField
+                  id="vehicle-make"
+                  required
+                  value={form.make}
+                  error={Boolean(errors.make)}
+                  helperText={errors.make}
+                  onChange={(event) => set({ make: event.target.value })}
+                />
+              </LabeledField>
+              <LabeledField htmlFor="vehicle-model" label="Model" required>
+                <TextField
+                  id="vehicle-model"
+                  required
+                  value={form.model}
+                  error={Boolean(errors.model)}
+                  helperText={errors.model}
+                  onChange={(event) => set({ model: event.target.value })}
+                />
+              </LabeledField>
+              <LabeledField htmlFor="vehicle-year" label="Year" required>
+                <TextField
+                  id="vehicle-year"
+                  type="number"
+                  required
+                  value={form.year}
+                  error={Boolean(errors.year)}
+                  helperText={errors.year}
+                  onChange={(event) => set({ year: Number(event.target.value) })}
+                />
+              </LabeledField>
+              <LabeledField htmlFor="vehicle-office" label="Office" required>
+                <TextField
+                  id="vehicle-office"
+                  slotProps={{ select: { labelId: 'vehicle-office-label' } }}
+                  select
+                  required
+                  value={form.office || ''}
+                  error={Boolean(errors.office)}
+                  helperText={errors.office}
+                  onChange={(event) => set({ office: Number(event.target.value) })}
+                >
+                  {offices.map((office) => (
+                    <MenuItem key={office.id} value={office.id}>
+                      {office.name} · {office.city}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </LabeledField>
             </Box>
             <FormControlLabel
               control={
