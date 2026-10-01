@@ -39,6 +39,9 @@ class Vehicle(TimeStampedModel):
 
     class Meta:
         ordering = ("make", "model", "vin")
+        # Matches the default ordering, so list pages read rows in order instead of
+        # sorting the whole table for every page.
+        indexes = (models.Index(fields=("make", "model", "vin"), name="vehicle_list_order_idx"),)
         constraints = (
             models.UniqueConstraint(
                 fields=("license_plate",),

@@ -76,8 +76,13 @@ class VehicleViewSet(viewsets.ModelViewSet[Vehicle]):
 
     @action(detail=False, url_path="duplicate-check")
     def duplicate_check(self, request: Request) -> Response:
-        params = _validated(DuplicateCheckSerializer, request)
-        return Response({"conflicts": selectors.vehicle_conflicts(**params.validated_data)})
+        params = _validated(DuplicateCheckSerializer, request).validated_data
+        conflicts = selectors.vehicle_conflicts(
+            vin=params.get("vin") or None,
+            plate=params.get("license_plate") or None,
+            exclude_pk=params.get("exclude"),
+        )
+        return Response({"conflicts": conflicts})
 
 
 class MechanicViewSet(viewsets.ModelViewSet[Mechanic]):

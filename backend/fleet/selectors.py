@@ -96,6 +96,13 @@ def vehicle_history(vehicle: Vehicle) -> QuerySet[MaintenanceRecord]:
     return vehicle.maintenance_records.select_related("mechanic").order_by("-performed_on", "-id")
 
 
+def office_taken(name: str, city: str, *, exclude_pk: int | None = None) -> bool:
+    taken = Office.objects.filter(name=name, city=city)
+    if exclude_pk is not None:
+        taken = taken.exclude(pk=exclude_pk)
+    return taken.exists()
+
+
 def active_plate_taken(plate: str, *, exclude_pk: int | None = None) -> bool:
     taken = Vehicle.objects.filter(license_plate=plate, is_active=True)
     if exclude_pk is not None:
