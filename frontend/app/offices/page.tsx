@@ -1,16 +1,10 @@
 'use client';
 
 import {
-  Alert,
   Box,
   Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
   IconButton,
   Paper,
-  Stack,
   Table,
   TableBody,
   TableCell,
@@ -27,11 +21,12 @@ import ConfirmDialog from '@/components/confirm-dialog';
 import LabeledInput from '@/components/labeled-input';
 import PageHeader from '@/components/page-header';
 import QueryState from '@/components/query-state';
+import FormDialog from '@/components/form-dialog';
 import { useToast } from '@/components/toast';
 import { api } from '@/lib/api';
 import { invalidate, queries } from '@/lib/queries';
 import { blockedMessage } from '@/lib/blocked';
-import { fieldErrors, generalError } from '@/lib/errors';
+import { fieldErrors } from '@/lib/errors';
 import { formatDate, formatMoney, plural } from '@/lib/format';
 import type { Office, OfficeInput, OfficeSummary } from '@/lib/types';
 import { tabular, visuallyHidden } from '@/lib/sx';
@@ -208,48 +203,34 @@ function OfficeDialog({
     },
   });
   const errors = fieldErrors(save.error);
-  const otherError = generalError(save.error);
 
   return (
-    <Dialog open onClose={onClose} maxWidth="xs" fullWidth>
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          save.mutate(form);
-        }}
-      >
-        <DialogTitle sx={{ fontSize: 18, fontWeight: 600 }}>
-          {office ? 'Edit office' : 'New office'}
-        </DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} mt={0.5}>
-            {otherError ? <Alert severity="error">{otherError}</Alert> : null}
-            <LabeledInput
-              id="office-name"
-              label="Name"
-              value={form.name}
-              error={errors.name}
-              autoFocus
-              onChange={(name) => setForm({ ...form, name })}
-            />
-            <LabeledInput
-              id="office-city"
-              label="City"
-              value={form.city}
-              error={errors.city}
-              onChange={(city) => setForm({ ...form, city })}
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button variant="outlined" color="inherit" onClick={onClose} sx={{ minHeight: 44 }}>
-            Cancel
-          </Button>
-          <Button type="submit" variant="contained" loading={save.isPending} sx={{ minHeight: 44 }}>
-            Save office
-          </Button>
-        </DialogActions>
-      </form>
-    </Dialog>
+    <FormDialog
+      title={office ? 'Edit office' : 'New office'}
+      submitLabel="Save office"
+      size="xs"
+      error={save.error}
+      isPending={save.isPending}
+      onSubmit={() => {
+        save.mutate(form);
+      }}
+      onClose={onClose}
+    >
+      <LabeledInput
+        id="office-name"
+        label="Name"
+        value={form.name}
+        error={errors.name}
+        autoFocus
+        onChange={(name) => setForm({ ...form, name })}
+      />
+      <LabeledInput
+        id="office-city"
+        label="City"
+        value={form.city}
+        error={errors.city}
+        onChange={(city) => setForm({ ...form, city })}
+      />
+    </FormDialog>
   );
 }
