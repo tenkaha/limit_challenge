@@ -127,6 +127,14 @@ class VehiclesNeedingMaintenanceTests(TestCase):
         self.assertQuerySetEqual(found, [never, very_overdue, overdue_366])
 
 
+class OfficeTakenTests(TestCase):
+    def test_same_name_and_city_is_taken_except_by_itself(self) -> None:
+        office = make_office("Downtown", "Austin")
+        self.assertTrue(selectors.office_taken("Downtown", "Austin"))
+        self.assertFalse(selectors.office_taken("Downtown", "Boston"))
+        self.assertFalse(selectors.office_taken("Downtown", "Austin", exclude_pk=office.pk))
+
+
 class VehicleConflictTests(TestCase):
     def test_vin_conflicts_with_any_vehicle_plate_only_with_active(self) -> None:
         office = make_office()
