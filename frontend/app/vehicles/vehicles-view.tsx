@@ -240,6 +240,7 @@ export default function VehiclesView() {
             <Box display="flex" gap={1} alignItems="center">
               <Typography
                 component="label"
+                id="rows-per-page-label"
                 htmlFor="rows-per-page"
                 fontSize={13}
                 color="text.secondary"
@@ -248,6 +249,7 @@ export default function VehiclesView() {
               </Typography>
               <Select
                 id="rows-per-page"
+                labelId="rows-per-page-label"
                 size="small"
                 value={pageSize}
                 onChange={(event) =>

@@ -44,6 +44,19 @@ describe('VehiclesView', () => {
     expect(unfiltered).toEqual(['1']);
   });
 
+  it('keeps rows per page in the URL and drops it again for the default', async () => {
+    setUrl('/vehicles?make=ford');
+    renderWithProviders(<VehiclesView />);
+
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Rows per page' }));
+    await userEvent.click(await screen.findByRole('option', { name: '50' }));
+    expect(currentUrl()).toBe('/vehicles?make=ford&page_size=50');
+
+    await userEvent.click(screen.getByRole('combobox', { name: 'Rows per page' }));
+    await userEvent.click(await screen.findByRole('option', { name: '10' }));
+    expect(currentUrl()).toBe('/vehicles?make=ford');
+  });
+
   it('removes only the filter whose chip is deleted', async () => {
     setUrl('/vehicles?make=ford&model=escape');
     renderWithProviders(<VehiclesView />);
