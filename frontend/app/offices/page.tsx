@@ -148,7 +148,6 @@ export default function OfficesPage() {
                       <IconButton
                         aria-label={`Delete ${office.name}`}
                         onClick={() => {
-                          remove.reset();
                           setDeleting(office);
                         }}
                       >
@@ -179,7 +178,6 @@ export default function OfficesPage() {
         title="Delete office?"
         message={`${deleting?.name ?? ''} will be removed permanently.`}
         isPending={remove.isPending}
-        error={null}
         onConfirm={() => {
           if (deleting) remove.mutate(deleting);
         }}

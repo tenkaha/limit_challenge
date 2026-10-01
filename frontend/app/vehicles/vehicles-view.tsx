@@ -309,7 +309,6 @@ export default function VehiclesView() {
         title={deleting ? `Delete ${deleting.license_plate}?` : ''}
         message="This can't be undone. Vehicles with maintenance history can't be deleted; mark them inactive instead."
         isPending={remove.isPending}
-        error={null}
         onConfirm={() => deleting && remove.mutate(deleting)}
         onClose={() => setDeleting(null)}
       />

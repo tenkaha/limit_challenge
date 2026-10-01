@@ -283,7 +283,6 @@ export default function VehicleDetailPage() {
             : ''
         }
         isPending={remove.isPending}
-        error={null}
         onConfirm={() => deleting && remove.mutate(deleting.id)}
         onClose={() => setDeleting(null)}
       />

@@ -288,7 +288,6 @@ function MechanicList({
                       <IconButton
                         aria-label={`Delete ${mechanic.name}`}
                         onClick={() => {
-                          remove.reset();
                           setDeleting(mechanic);
                         }}
                       >
@@ -307,7 +306,6 @@ function MechanicList({
         title="Delete mechanic?"
         message={`${deleting?.name ?? ''} will be removed permanently.`}
         isPending={remove.isPending}
-        error={null}
         onConfirm={() => {
           if (deleting) remove.mutate(deleting);
         }}
