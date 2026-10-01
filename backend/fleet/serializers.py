@@ -197,18 +197,18 @@ class DuplicateCheckSerializer(serializers.Serializer[dict[str, Any]]):
     license_plate = serializers.CharField(required=False)
     exclude = serializers.IntegerField(required=False)
 
+    def validate_vin(self, value: str) -> str:
+        return normalize_vin(value)
+
+    def validate_license_plate(self, value: str) -> str:
+        return normalize_plate(value)
+
     @override
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         if not attrs.get("vin") and not attrs.get("license_plate"):
             msg = "Provide vin, license_plate, or both."
             raise serializers.ValidationError(msg)
-        return {
-            "vin": normalize_vin(attrs["vin"]) if attrs.get("vin") else None,
-            "plate": normalize_plate(attrs["license_plate"])
-            if attrs.get("license_plate")
-            else None,
-            "exclude_pk": attrs.get("exclude"),
-        }
+        return attrs
 
 
 def _normalize(data: object, **normalizers: Callable[[str], str]) -> object:
