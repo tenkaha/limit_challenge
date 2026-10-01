@@ -75,7 +75,7 @@ export default function VehiclesView() {
     mutationFn: (vehicle: Vehicle) => api.vehicles.remove(vehicle.id),
     onSuccess: async (_data, vehicle) => {
       toast.success('Vehicle deleted', `${vehicle.license_plate} was removed.`);
-      await invalidate.vehicles(queryClient);
+      await invalidate.vehicles(queryClient, vehicle.id);
     },
     onError: (error, vehicle) =>
       toast.error(`Can't delete ${vehicle.license_plate}`, blockedDeleteDetail(error)),

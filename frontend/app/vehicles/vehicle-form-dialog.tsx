@@ -52,7 +52,7 @@ export default function VehicleFormDialog({ vehicle, offices, onClose, onSaved }
     mutationFn: (input: VehicleInput) =>
       vehicle ? api.vehicles.update(vehicle.id, input) : api.vehicles.create(input),
     onSuccess: async (saved) => {
-      await invalidate.vehicles(queryClient);
+      await invalidate.vehicles(queryClient, saved.id);
       onSaved(saved, vehicle === null);
     },
   });

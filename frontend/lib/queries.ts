@@ -48,9 +48,9 @@ const refresh = (client: QueryClient, ...prefixes: readonly (readonly unknown[])
   Promise.all(prefixes.map((queryKey) => client.invalidateQueries({ queryKey })));
 
 export const invalidate = {
-  // Search results, every vehicle page, and the office counts/costs.
-  vehicles: (client: QueryClient) =>
-    refresh(client, keys.vehicles.all, keys.vehicle.all, keys.offices.summary()),
+  // Search results, the changed vehicle's page, and the office counts/costs.
+  vehicles: (client: QueryClient, vehicleId: Id) =>
+    refresh(client, keys.vehicles.all, keys.vehicle.detail(vehicleId), keys.offices.summary()),
   // The vehicle's history plus both reports built from records.
   records: (client: QueryClient, vehicleId: Id) =>
     refresh(
