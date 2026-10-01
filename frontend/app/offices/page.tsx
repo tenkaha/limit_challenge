@@ -31,7 +31,7 @@ import { useToast } from '@/components/toast';
 import { api } from '@/lib/api';
 import { invalidate, queries } from '@/lib/queries';
 import { blockedMessage } from '@/lib/blocked';
-import { errorMessage, fieldErrors } from '@/lib/errors';
+import { fieldErrors, generalError } from '@/lib/errors';
 import { formatDate, formatMoney, plural } from '@/lib/format';
 import type { Office, OfficeInput, OfficeSummary } from '@/lib/types';
 import { tabular, visuallyHidden } from '@/lib/sx';
@@ -208,7 +208,7 @@ function OfficeDialog({
     },
   });
   const errors = fieldErrors(save.error);
-  const otherError = save.error && !errors.name && !errors.city ? errorMessage(save.error) : null;
+  const otherError = generalError(save.error);
 
   return (
     <Dialog open onClose={onClose} maxWidth="xs" fullWidth>

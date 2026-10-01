@@ -37,7 +37,7 @@ import { useToast } from '@/components/toast';
 import { api } from '@/lib/api';
 import { invalidate, queries } from '@/lib/queries';
 import { blockedMessage } from '@/lib/blocked';
-import { errorMessage, fieldErrors } from '@/lib/errors';
+import { fieldErrors, generalError } from '@/lib/errors';
 import { formatMoney, plural } from '@/lib/format';
 import type { Mechanic, MechanicInput, Page } from '@/lib/types';
 import { tabular, visuallyHidden } from '@/lib/sx';
@@ -337,10 +337,7 @@ function MechanicDialog({
     },
   });
   const errors = fieldErrors(save.error);
-  const otherError =
-    save.error && !errors.name && !errors.certification_number && !errors.is_active
-      ? errorMessage(save.error)
-      : null;
+  const otherError = generalError(save.error);
 
   return (
     <Dialog open onClose={onClose} maxWidth="xs" fullWidth>

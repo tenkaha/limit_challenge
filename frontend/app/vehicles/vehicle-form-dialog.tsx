@@ -20,7 +20,7 @@ import { fonts } from '@/app/theme';
 import LabeledField from '@/components/labeled-field';
 import { api } from '@/lib/api';
 import { invalidate } from '@/lib/queries';
-import { errorMessage, fieldErrors } from '@/lib/errors';
+import { fieldErrors, generalError } from '@/lib/errors';
 import { normalizePlate } from '@/lib/normalize';
 import type { Office, Vehicle, VehicleInput } from '@/lib/types';
 
@@ -57,7 +57,7 @@ export default function VehicleFormDialog({ vehicle, offices, onClose, onSaved }
     },
   });
   const errors = fieldErrors(save.error);
-  const generalError = save.error && Object.keys(errors).length === 0;
+  const formError = generalError(save.error);
   const plate = normalizePlate(form.license_plate);
   const set = (changes: Partial<VehicleInput>) => setForm({ ...form, ...changes });
 
@@ -74,7 +74,7 @@ export default function VehicleFormDialog({ vehicle, offices, onClose, onSaved }
         </DialogTitle>
         <DialogContent>
           <Stack spacing={2} mt={1}>
-            {generalError ? <Alert severity="error">{errorMessage(save.error)}</Alert> : null}
+            {formError ? <Alert severity="error">{formError}</Alert> : null}
             <LabeledField htmlFor="vehicle-vin" label="VIN" required>
               <TextField
                 id="vehicle-vin"

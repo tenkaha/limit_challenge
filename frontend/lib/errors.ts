@@ -35,3 +35,11 @@ export function isRetryable(error: unknown): boolean {
   const status = error.response?.status;
   return status === undefined || status >= 500;
 }
+
+// The message to show above a form, or null when the API's errors belong to
+// specific fields (those render inline under their inputs instead).
+export function generalError(error: unknown): string | null {
+  if (!error) return null;
+  const fields = Object.keys(fieldErrors(error)).filter((key) => key !== 'non_field_errors');
+  return fields.length ? null : errorMessage(error);
+}
