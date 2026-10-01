@@ -17,16 +17,25 @@ import type {
   VehicleInput,
 } from './types';
 
-// Offices and mechanics are small lists used in dropdowns, so fetch them in one page.
-const ALL = { page_size: 100 };
-
 async function get<T>(url: string, params?: object): Promise<T> {
   return (await apiClient.get<T>(url, { params })).data;
 }
 
+// Offices and mechanics feed dropdowns and lookups, so they must be complete:
+// fetch the largest page size and follow `next` until the list ends.
+async function getAll<T>(url: string): Promise<Page<T>> {
+  let page = await get<Page<T>>(url, { page_size: 100 });
+  const results = [...page.results];
+  while (page.next) {
+    page = await get<Page<T>>(page.next);
+    results.push(...page.results);
+  }
+  return { count: page.count, next: null, previous: null, results };
+}
+
 export const api = {
   offices: {
-    list: () => get<Page<Office>>('/offices/', ALL),
+    list: () => getAll<Office>('/offices/'),
     summary: () => get<OfficeSummary[]>('/offices/summary/'),
     create: async (input: OfficeInput) => (await apiClient.post<Office>('/offices/', input)).data,
     update: async (id: Id, input: OfficeInput) =>
@@ -36,7 +45,7 @@ export const api = {
     },
   },
   mechanics: {
-    list: () => get<Page<Mechanic>>('/mechanics/', ALL),
+    list: () => getAll<Mechanic>('/mechanics/'),
     workload: () => get<MechanicWorkload[]>('/mechanics/workload/'),
     create: async (input: MechanicInput) =>
       (await apiClient.post<Mechanic>('/mechanics/', input)).data,
