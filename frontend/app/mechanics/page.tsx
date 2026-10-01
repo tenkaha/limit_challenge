@@ -40,9 +40,7 @@ import { blockedMessage } from '@/lib/blocked';
 import { errorMessage, fieldErrors } from '@/lib/errors';
 import { formatMoney, plural } from '@/lib/format';
 import type { Mechanic, MechanicInput, Page } from '@/lib/types';
-
-const tabular = { fontVariantNumeric: 'tabular-nums' };
-const visuallyHidden = { position: 'absolute', left: -9999 } as const;
+import { tabular, visuallyHidden } from '@/lib/sx';
 
 export default function MechanicsPage() {
   const toast = useToast();
@@ -122,7 +120,7 @@ function Workload({ mechanics }: { mechanics: Mechanic[] }) {
       isEmpty={rows.length === 0}
       emptyMessage="No mechanics to rank yet."
     >
-      <TableContainer component={Paper} variant="outlined">
+      <TableContainer component={Paper} variant="outlined" sx={{ position: 'relative' }}>
         <Table aria-label="Mechanic workload">
           <TableHead>
             <TableRow>
@@ -251,7 +249,7 @@ function MechanicList({
         isEmpty={mechanics.length === 0}
         emptyMessage="No mechanics yet. Create the first one."
       >
-        <TableContainer component={Paper} variant="outlined">
+        <TableContainer component={Paper} variant="outlined" sx={{ position: 'relative' }}>
           <Table aria-label="Mechanics">
             <TableHead>
               <TableRow>

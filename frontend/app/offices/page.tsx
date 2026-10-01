@@ -34,9 +34,7 @@ import { blockedMessage } from '@/lib/blocked';
 import { errorMessage, fieldErrors } from '@/lib/errors';
 import { formatDate, formatMoney, plural } from '@/lib/format';
 import type { Office, OfficeInput, OfficeSummary } from '@/lib/types';
-
-const tabular = { fontVariantNumeric: 'tabular-nums' };
-const visuallyHidden = { position: 'absolute', left: -9999 } as const;
+import { tabular, visuallyHidden } from '@/lib/sx';
 
 function windowStart(): string {
   const since = new Date();
@@ -98,7 +96,7 @@ export default function OfficesPage() {
         isEmpty={offices.length === 0}
         emptyMessage="No offices yet. Create the first one."
       >
-        <TableContainer component={Paper} variant="outlined">
+        <TableContainer component={Paper} variant="outlined" sx={{ position: 'relative' }}>
           <Table aria-label="Offices">
             <TableHead>
               <TableRow>

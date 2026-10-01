@@ -33,6 +33,7 @@ import { blockedMessage } from '@/lib/blocked';
 import { plural } from '@/lib/format';
 import { rememberVehicleSearch } from '@/lib/last-search';
 import type { Vehicle } from '@/lib/types';
+import { visuallyHidden } from '@/lib/sx';
 import VehicleFiltersBar from './vehicle-filters';
 import VehicleFormDialog from './vehicle-form-dialog';
 import { useVehicleFilters } from './use-vehicle-filters';
@@ -315,11 +316,3 @@ export default function VehiclesView() {
     </>
   );
 }
-
-const visuallyHidden = {
-  position: 'absolute',
-  width: 1,
-  height: 1,
-  overflow: 'hidden',
-  clip: 'rect(0 0 0 0)',
-} as const;
