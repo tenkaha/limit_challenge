@@ -1,4 +1,5 @@
 import { Box } from '@mui/material';
+import { colors } from '@/app/theme';
 
 export default function StatusDot({ active }: { active: boolean }) {
   return (
@@ -18,7 +19,7 @@ export default function StatusDot({ active }: { active: boolean }) {
           width: 8,
           height: 8,
           borderRadius: '50%',
-          bgcolor: active ? 'success.main' : '#98A2B3',
+          bgcolor: active ? 'success.main' : colors.dotInactive,
         }}
       />
       {active ? 'Active' : 'Inactive'}

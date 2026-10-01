@@ -21,7 +21,7 @@ import { Pencil, Plus, Trash2 } from 'lucide-react';
 import NextLink from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
-import { fonts } from '@/app/theme';
+import { colors, fonts } from '@/app/theme';
 import ConfirmDialog from '@/components/confirm-dialog';
 import PageHeader from '@/components/page-header';
 import QueryState from '@/components/query-state';
@@ -189,7 +189,7 @@ export default function VehiclesView() {
                       >
                         {vehicle.vin}
                       </TableCell>
-                      <TableCell sx={{ color: '#344054' }}>
+                      <TableCell sx={{ color: colors.inkSoft }}>
                         {office ? `${office.name} · ${office.city}` : '…'}
                       </TableCell>
                       <TableCell>

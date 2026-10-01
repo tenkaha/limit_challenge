@@ -117,7 +117,7 @@ export default function VehicleDetailPage() {
                   </Typography>
                   <Box
                     sx={{
-                      bgcolor: data.is_active ? '#ECFDF3' : colors.rowDivider,
+                      bgcolor: data.is_active ? colors.successSoft : colors.rowDivider,
                       borderRadius: 999,
                       px: 1.25,
                       py: 0.5,
