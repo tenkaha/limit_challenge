@@ -24,18 +24,34 @@ export default function NavBar() {
         height: 60,
         display: 'flex',
         alignItems: 'center',
-        gap: 5,
-        px: 4,
+        gap: { xs: 2, sm: 5 },
+        px: { xs: 2, sm: 4 },
         bgcolor: 'background.paper',
         borderBottom: 1,
         borderColor: 'divider',
       }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, fontWeight: 600, fontSize: 16 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1.25,
+          fontWeight: 600,
+          fontSize: 16,
+          whiteSpace: 'nowrap',
+          flexShrink: 0,
+        }}
+      >
         <CarFront size={22} color={colors.accent} aria-hidden />
         Fleet Tracker
       </Box>
-      <Stack direction="row" spacing={0.5} component="nav" aria-label="Main">
+      <Stack
+        direction="row"
+        spacing={0.5}
+        component="nav"
+        aria-label="Main"
+        sx={{ minWidth: 0, overflowX: 'auto' }}
+      >
         {LINKS.map(({ href, label }) => {
           const current = pathname.startsWith(href);
           return (
@@ -47,6 +63,7 @@ export default function NavBar() {
               sx={{
                 px: 1.5,
                 py: 1,
+                whiteSpace: 'nowrap',
                 borderRadius: 1.5,
                 fontSize: 14,
                 textDecoration: 'none',

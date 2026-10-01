@@ -8,7 +8,11 @@ import { ToastProvider } from '@/components/toast';
 import { theme } from './theme';
 
 export default function Providers({ children }: PropsWithChildren) {
-  const [queryClient] = useState(() => new QueryClient());
+  // Writes invalidate exactly what they change (lib/queries.ts), so data can stay
+  // fresh for a short while instead of refetching on every page visit.
+  const [queryClient] = useState(
+    () => new QueryClient({ defaultOptions: { queries: { staleTime: 30_000 } } }),
+  );
 
   return (
     <QueryClientProvider client={queryClient}>

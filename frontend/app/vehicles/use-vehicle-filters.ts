@@ -25,7 +25,7 @@ export function useVehicleFilters() {
 
   const filters = useMemo(() => {
     const result: VehicleFilters = {};
-    for (const key of [...FILTER_KEYS, 'page'] as const) {
+    for (const key of [...FILTER_KEYS, 'page', 'page_size'] as const) {
       const value = searchParams.get(key);
       if (value) result[key] = value;
     }

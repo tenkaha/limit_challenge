@@ -24,6 +24,7 @@ import QueryState from '@/components/query-state';
 import StatusDot from '@/components/status-dot';
 import { useToast } from '@/components/toast';
 import { api } from '@/lib/api';
+import { invalidate, queries } from '@/lib/queries';
 import { errorMessage } from '@/lib/errors';
 import { formatDate, formatMoney } from '@/lib/format';
 import { MAINTENANCE_TYPES, type MaintenanceHistoryItem } from '@/lib/types';
@@ -51,14 +52,13 @@ export default function VehicleDetailPage() {
   const queryClient = useQueryClient();
   const toast = useToast();
   const vehicle = useQuery({
-    queryKey: ['vehicle', vehicleId],
-    queryFn: () => api.vehicles.detail(vehicleId),
+    ...queries.vehicleDetail(vehicleId),
     retry: false,
   });
   const [editing, setEditing] = useState<Editing>(null);
   const [deleting, setDeleting] = useState<MaintenanceHistoryItem | null>(null);
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ['vehicle', vehicleId] });
+  const refresh = () => invalidate.records(queryClient, vehicleId);
   const remove = useMutation({
     mutationFn: (id: number) => api.records.remove(id),
     onSuccess: async () => {
@@ -173,79 +173,85 @@ export default function VehicleDetailPage() {
                 </Typography>
               ) : (
                 <>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Date</TableCell>
-                        <TableCell>Type</TableCell>
-                        <TableCell>Mechanic</TableCell>
-                        <TableCell align="right">Cost</TableCell>
-                        <TableCell>Notes</TableCell>
-                        <TableCell>
-                          <Box component="span" sx={{ position: 'absolute', left: -9999 }}>
-                            Actions
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {records.map((record) => (
-                        <TableRow key={record.id} hover sx={{ verticalAlign: 'top' }}>
-                          <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                            {formatDate(record.performed_on)}
-                          </TableCell>
+                  <Box sx={{ overflowX: 'auto', position: 'relative' }}>
+                    <Table sx={{ minWidth: 760 }}>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Date</TableCell>
+                          <TableCell>Type</TableCell>
+                          <TableCell>Mechanic</TableCell>
+                          <TableCell align="right">Cost</TableCell>
+                          <TableCell>Notes</TableCell>
                           <TableCell>
-                            <Box
-                              component="span"
-                              sx={{
-                                fontSize: 13,
-                                bgcolor: colors.rowDivider,
-                                color: colors.inkSoft,
-                                borderRadius: 1.5,
-                                px: 1,
-                                py: 0.375,
-                                whiteSpace: 'nowrap',
-                              }}
-                            >
-                              {MAINTENANCE_TYPES[record.maintenance_type]}
+                            <Box component="span" sx={{ position: 'absolute', left: -9999 }}>
+                              Actions
                             </Box>
-                          </TableCell>
-                          <TableCell>
-                            <div>{record.mechanic.name}</div>
-                            <Box
-                              sx={{ fontFamily: fonts.mono, fontSize: 12, color: colors.subtle }}
-                            >
-                              {record.mechanic.certification_number}
-                            </Box>
-                          </TableCell>
-                          <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>
-                            {formatMoney(record.cost)}
-                          </TableCell>
-                          <TableCell
-                            sx={{ whiteSpace: 'pre-line', maxWidth: 280, color: 'text.secondary' }}
-                          >
-                            {record.notes || '—'}
-                          </TableCell>
-                          <TableCell align="right" sx={{ whiteSpace: 'nowrap', py: 1 }}>
-                            <IconButton
-                              aria-label={`Edit record from ${record.performed_on}`}
-                              onClick={() => setEditing({ record })}
-                              sx={{ color: 'text.secondary' }}
-                            >
-                              <Pencil size={18} />
-                            </IconButton>
-                            <IconButton
-                              aria-label={`Delete record from ${record.performed_on}`}
-                              onClick={() => setDeleting(record)}
-                              sx={{ color: 'text.secondary' }}
-                            >
-                              <Trash2 size={18} />
-                            </IconButton>
                           </TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHead>
+                      <TableBody>
+                        {records.map((record) => (
+                          <TableRow key={record.id} hover sx={{ verticalAlign: 'top' }}>
+                            <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                              {formatDate(record.performed_on)}
+                            </TableCell>
+                            <TableCell>
+                              <Box
+                                component="span"
+                                sx={{
+                                  fontSize: 13,
+                                  bgcolor: colors.rowDivider,
+                                  color: colors.inkSoft,
+                                  borderRadius: 1.5,
+                                  px: 1,
+                                  py: 0.375,
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {MAINTENANCE_TYPES[record.maintenance_type]}
+                              </Box>
+                            </TableCell>
+                            <TableCell>
+                              <div>{record.mechanic.name}</div>
+                              <Box
+                                sx={{ fontFamily: fonts.mono, fontSize: 12, color: colors.subtle }}
+                              >
+                                {record.mechanic.certification_number}
+                              </Box>
+                            </TableCell>
+                            <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                              {formatMoney(record.cost)}
+                            </TableCell>
+                            <TableCell
+                              sx={{
+                                whiteSpace: 'pre-line',
+                                maxWidth: 280,
+                                color: 'text.secondary',
+                              }}
+                            >
+                              {record.notes || '—'}
+                            </TableCell>
+                            <TableCell align="right" sx={{ whiteSpace: 'nowrap', py: 1 }}>
+                              <IconButton
+                                aria-label={`Edit record from ${record.performed_on}`}
+                                onClick={() => setEditing({ record })}
+                                sx={{ color: 'text.secondary' }}
+                              >
+                                <Pencil size={18} />
+                              </IconButton>
+                              <IconButton
+                                aria-label={`Delete record from ${record.performed_on}`}
+                                onClick={() => setDeleting(record)}
+                                sx={{ color: 'text.secondary' }}
+                              >
+                                <Trash2 size={18} />
+                              </IconButton>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </Box>
                   <Typography fontSize={13} color={colors.subtle} px={2} py={1.5}>
                     Newest first · all {records.length} records
                   </Typography>
