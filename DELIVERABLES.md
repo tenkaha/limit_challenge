@@ -15,7 +15,9 @@ Each item the brief in [CHALLENGE.md](CHALLENGE.md) asks for, and where to find 
 
 ## Demo video
 
-[Watch `docs/demo.mp4`](docs/demo.mp4) (1920×1080, 1:24, with narration). It runs the frontend against the seeded API:
+https://github.com/user-attachments/assets/0d45eacb-d843-4a89-b141-8122f5990b03
+
+1920×1080, 1:24, with narration. The same file is committed as [`docs/demo.mp4`](docs/demo.mp4). It runs the frontend against the seeded API:
 
 1. Vehicle search with filters stored in the URL, removable filter chips and a copyable link.
 2. A vehicle's detail page with its office, totals and full 800-record history.
