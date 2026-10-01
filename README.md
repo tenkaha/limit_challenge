@@ -1,6 +1,6 @@
 # Fleet Maintenance API
 
-A Django REST Framework API for offices, vehicles, mechanics and maintenance records. The original brief is in [CHALLENGE.md](CHALLENGE.md).
+A Django REST Framework API for offices, vehicles, mechanics and maintenance records. The original brief is in [CHALLENGE.md](CHALLENGE.md). [DELIVERABLES.md](DELIVERABLES.md) maps each deliverable to where it lives, including the frontend demo video.
 
 ## Run
 
