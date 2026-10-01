@@ -61,6 +61,7 @@ export default function RecordDialog({ vehicleId, record, onClose, onSaved }: Re
     ...fieldErrors(save.error),
     ...(missingMechanic ? { mechanic: 'Select a mechanic.' } : {}),
   };
+  const formError = generalError(save.error);
   const set = (field: keyof typeof form) => (event: { target: { value: string } }) =>
     setForm((current) => ({ ...current, [field]: event.target.value }));
 
@@ -90,9 +91,7 @@ export default function RecordDialog({ vehicleId, record, onClose, onSaved }: Re
             mt={1}
             sx={{ '& .MuiInputBase-root:not(.MuiInputBase-multiline)': { minHeight: 44 } }}
           >
-            {generalError(save.error) ? (
-              <Alert severity="error">{generalError(save.error)}</Alert>
-            ) : null}
+            {formError ? <Alert severity="error">{formError}</Alert> : null}
             <LabeledField htmlFor="record-mechanic" label="Mechanic" required>
               <TextField
                 id="record-mechanic"
