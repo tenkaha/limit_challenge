@@ -29,8 +29,8 @@ import StatusDot from '@/components/status-dot';
 import { useToast } from '@/components/toast';
 import { api } from '@/lib/api';
 import { invalidate, queries } from '@/lib/queries';
-import { blockedCount } from '@/lib/blocked';
-import { errorMessage } from '@/lib/errors';
+import { blockedMessage } from '@/lib/blocked';
+import { plural } from '@/lib/format';
 import { rememberVehicleSearch } from '@/lib/last-search';
 import type { Vehicle } from '@/lib/types';
 import VehicleFiltersBar from './vehicle-filters';
@@ -39,12 +39,11 @@ import { useVehicleFilters } from './use-vehicle-filters';
 
 export const PAGE_SIZES = [10, 25, 50] as const;
 
-function blockedDeleteDetail(error: unknown) {
-  const records = blockedCount(error);
-  return records === null
-    ? errorMessage(error)
-    : `It has ${records} maintenance records. Mark it inactive instead.`;
-}
+const blockedDeleteDetail = (error: unknown) =>
+  blockedMessage(
+    error,
+    (count) => `It has ${plural(count, 'maintenance record')}. Mark the vehicle inactive instead.`,
+  );
 
 export default function VehiclesView() {
   const router = useRouter();

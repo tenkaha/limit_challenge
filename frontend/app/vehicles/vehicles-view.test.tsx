@@ -43,8 +43,8 @@ describe('VehiclesView', () => {
       http.delete(`${API}/vehicles/10/`, () =>
         HttpResponse.json(
           {
-            detail: 'Cannot delete: it is referenced by 183 maintenance records.',
-            blocked_count: 183,
+            detail: 'Cannot delete: it is referenced by 1 maintenance record.',
+            blocked_count: 1,
           },
           { status: 409 },
         ),
@@ -57,7 +57,9 @@ describe('VehiclesView', () => {
 
     const toast = await screen.findByRole('alert');
     expect(toast).toHaveTextContent("Can't delete FYT014");
-    expect(toast).toHaveTextContent('It has 183 maintenance records. Mark it inactive instead.');
+    expect(toast).toHaveTextContent(
+      'It has 1 maintenance record. Mark the vehicle inactive instead.',
+    );
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

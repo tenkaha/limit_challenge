@@ -36,9 +36,9 @@ import StatusDot from '@/components/status-dot';
 import { useToast } from '@/components/toast';
 import { api } from '@/lib/api';
 import { invalidate, queries } from '@/lib/queries';
-import { blockedCount } from '@/lib/blocked';
+import { blockedMessage } from '@/lib/blocked';
 import { errorMessage, fieldErrors } from '@/lib/errors';
-import { formatMoney } from '@/lib/format';
+import { formatMoney, plural } from '@/lib/format';
 import type { Mechanic, MechanicInput, Page } from '@/lib/types';
 
 const tabular = { fontVariantNumeric: 'tabular-nums' };
@@ -230,12 +230,13 @@ function MechanicList({
     },
     onError: (error, mechanic) => {
       setDeleting(null);
-      const count = blockedCount(error);
       onBlocked(
         mechanic.name,
-        count === null
-          ? errorMessage(error)
-          : `It has ${count} maintenance ${count === 1 ? 'record' : 'records'}. Mark them inactive instead.`,
+        blockedMessage(
+          error,
+          (count) =>
+            `It has ${plural(count, 'maintenance record')}. Mark the mechanic inactive instead.`,
+        ),
       );
     },
   });

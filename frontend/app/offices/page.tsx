@@ -30,9 +30,9 @@ import QueryState from '@/components/query-state';
 import { useToast } from '@/components/toast';
 import { api } from '@/lib/api';
 import { invalidate, queries } from '@/lib/queries';
-import { blockedCount } from '@/lib/blocked';
+import { blockedMessage } from '@/lib/blocked';
 import { errorMessage, fieldErrors } from '@/lib/errors';
-import { formatDate, formatMoney } from '@/lib/format';
+import { formatDate, formatMoney, plural } from '@/lib/format';
 import type { Office, OfficeInput, OfficeSummary } from '@/lib/types';
 
 const tabular = { fontVariantNumeric: 'tabular-nums' };
@@ -62,12 +62,13 @@ export default function OfficesPage() {
       setDeleting(null);
       // The count comes from the API: the summary only counts active vehicles,
       // but inactive ones block the delete too.
-      const count = blockedCount(error);
       toast.error(
         `Can't delete ${office.name}`,
-        count === null
-          ? errorMessage(error)
-          : `It still has ${count} ${count === 1 ? 'vehicle' : 'vehicles'}. Move them to another office first.`,
+        blockedMessage(
+          error,
+          (count) =>
+            `It still has ${plural(count, 'vehicle')}. Move ${count === 1 ? 'it' : 'them'} to another office first.`,
+        ),
       );
     },
   });
