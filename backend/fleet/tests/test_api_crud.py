@@ -130,6 +130,11 @@ class VehicleApiTests(ApiTestCase):
         response = self.client.patch(f"/api/vehicles/{vehicle.pk}/", {"make": "Acura"})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    def test_next_year_is_accepted(self) -> None:
+        next_year = timezone.localdate().year + 1
+        response = self.client.post("/api/vehicles/", self.vehicle_payload(year=next_year))
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
     def test_year_more_than_one_ahead_rejected(self) -> None:
         too_new = timezone.localdate().year + 2
         response = self.client.post("/api/vehicles/", self.vehicle_payload(year=too_new))
@@ -150,6 +155,7 @@ class VehicleApiTests(ApiTestCase):
         self.assertEqual(
             response.data["detail"], "Cannot delete: it is referenced by 2 maintenance records."
         )
+        self.assertEqual(response.data["blocked_count"], 2)
 
     def test_is_active_filter(self) -> None:
         self.make_vehicle()
@@ -181,6 +187,13 @@ class MechanicApiTests(ApiTestCase):
         self.make_record(self.make_vehicle())
         response = self.client.delete(f"/api/mechanics/{self.mechanic.pk}/")
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(
+            response.data,
+            {
+                "detail": "Cannot delete: it is referenced by 1 maintenance record.",
+                "blocked_count": 1,
+            },
+        )
 
 
 class MaintenanceRecordApiTests(ApiTestCase):
@@ -222,3 +235,10 @@ class MaintenanceRecordApiTests(ApiTestCase):
         response = self.client.post("/api/maintenance-records/", self.record_payload(cost="-1"))
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("cost", response.data)
+
+    def test_record_deletes_freely_and_vehicle_stays(self) -> None:
+        vehicle = self.make_vehicle()
+        record = self.make_record(vehicle)
+        response = self.client.delete(f"/api/maintenance-records/{record.pk}/")
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(self.client.get(f"/api/vehicles/{vehicle.pk}/").status_code, 200)

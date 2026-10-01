@@ -77,8 +77,10 @@ List endpoints accept `?page=`, `?page_size=` (max 100) and `?ordering=`.
 Invalid input returns `400` with errors keyed by field. Deleting an office with vehicles, or a vehicle or mechanic with maintenance records, returns `409`:
 
 ```json
-{"detail": "Cannot delete: it is referenced by 113 maintenance records."}
+{"detail": "Cannot delete: it is referenced by 113 maintenance records.", "blocked_count": 113}
 ```
+
+`blocked_count` is the number of rows still referencing it, for clients that word the message themselves.
 
 ## Assumptions
 

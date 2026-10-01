@@ -14,7 +14,13 @@ export const colors = {
   borderStrong: '#D0D5DD',
   rowDivider: '#F2F4F7',
   headerCell: '#FAFBFC',
+  accentHover: '#163BA3',
+  successSoft: '#ECFDF3',
+  dotInactive: '#98A2B3',
   toast: '#1D2939',
+  toastMuted: '#D0D5DD',
+  toastError: '#FDA29B',
+  toastSuccess: '#6CE9A6',
 };
 
 export const fonts = {
@@ -76,6 +82,11 @@ export const theme = createTheme({
     },
     MuiDialog: {
       styleOverrides: { paper: { borderRadius: 14 } },
+    },
+    MuiDialogActions: {
+      styleOverrides: {
+        root: { padding: '16px 24px', borderTop: `1px solid ${colors.border}` },
+      },
     },
     MuiTab: {
       styleOverrides: { root: { textTransform: 'none', fontSize: 14, minHeight: 44 } },

@@ -1,9 +1,9 @@
+import { Box } from '@mui/material';
 import { AppRouterCacheProvider } from '@mui/material-nextjs/v16-appRouter';
 import type { Metadata } from 'next';
 import { IBM_Plex_Mono, IBM_Plex_Sans } from 'next/font/google';
 import NavBar from '@/components/nav-bar';
 import Providers from './providers';
-import './globals.css';
 
 const plexSans = IBM_Plex_Sans({
   variable: '--font-plex-sans',
@@ -28,13 +28,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${plexSans.variable} ${plexMono.variable} h-full antialiased`}>
-      <body className="min-h-full flex flex-col">
+    <html lang="en" className={`${plexSans.variable} ${plexMono.variable}`}>
+      <body>
         {/* Collects emotion styles during SSR so server and client markup match. */}
-        <AppRouterCacheProvider options={{ enableCssLayer: true }}>
+        <AppRouterCacheProvider>
           <Providers>
             <NavBar />
-            <main className="mx-auto w-full max-w-[1180px] px-4 py-8 sm:px-8">{children}</main>
+            <Box component="main" sx={{ maxWidth: 1180, mx: 'auto', px: { xs: 2, sm: 4 }, py: 4 }}>
+              {children}
+            </Box>
           </Providers>
         </AppRouterCacheProvider>
       </body>

@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { MouseEvent } from 'react';
 import { useSyncExternalStore } from 'react';
+import { colors } from '@/app/theme';
 import { queries } from '@/lib/queries';
 import { vehiclesListHref } from '@/lib/last-search';
 
@@ -64,7 +65,7 @@ export default function BackLink() {
         fontSize: 14,
         color: 'primary.main',
         textDecoration: 'none',
-        '&:hover': { color: '#163BA3' },
+        '&:hover': { color: colors.accentHover },
       }}
     >
       <ChevronLeft size={16} aria-hidden />

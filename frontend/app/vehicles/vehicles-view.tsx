@@ -21,7 +21,7 @@ import { Pencil, Plus, Trash2 } from 'lucide-react';
 import NextLink from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
-import { fonts } from '@/app/theme';
+import { colors, fonts } from '@/app/theme';
 import ConfirmDialog from '@/components/confirm-dialog';
 import PageHeader from '@/components/page-header';
 import QueryState from '@/components/query-state';
@@ -29,22 +29,22 @@ import StatusDot from '@/components/status-dot';
 import { useToast } from '@/components/toast';
 import { api } from '@/lib/api';
 import { invalidate, queries } from '@/lib/queries';
-import { blockedCount } from '@/lib/blocked';
-import { errorMessage } from '@/lib/errors';
+import { blockedMessage } from '@/lib/blocked';
+import { plural } from '@/lib/format';
 import { rememberVehicleSearch } from '@/lib/last-search';
 import type { Vehicle } from '@/lib/types';
+import { visuallyHidden } from '@/lib/sx';
 import VehicleFiltersBar from './vehicle-filters';
 import VehicleFormDialog from './vehicle-form-dialog';
 import { useVehicleFilters } from './use-vehicle-filters';
 
 export const PAGE_SIZES = [10, 25, 50] as const;
 
-function blockedDeleteDetail(error: unknown) {
-  const records = blockedCount(error);
-  return records === null
-    ? errorMessage(error)
-    : `It has ${records} maintenance records. Mark it inactive instead.`;
-}
+const blockedDeleteDetail = (error: unknown) =>
+  blockedMessage(
+    error,
+    (count) => `It has ${plural(count, 'maintenance record')}. Mark the vehicle inactive instead.`,
+  );
 
 export default function VehiclesView() {
   const router = useRouter();
@@ -61,9 +61,9 @@ export default function VehiclesView() {
     // A 400 (e.g. from > to) won't fix itself by retrying.
     retry: false,
   });
-  // Same key as the unfiltered list, so it is shared with that page when cached.
+  // Only the total is needed, so ask for one row instead of a full page.
   const fleet = useQuery({
-    ...queries.vehicleSearch({}),
+    ...queries.vehicleSearch({ page_size: '1' }),
     enabled: activeCount > 0,
   });
   const officeById = useMemo(
@@ -75,7 +75,7 @@ export default function VehiclesView() {
     mutationFn: (vehicle: Vehicle) => api.vehicles.remove(vehicle.id),
     onSuccess: async (_data, vehicle) => {
       toast.success('Vehicle deleted', `${vehicle.license_plate} was removed.`);
-      await invalidate.vehicles(queryClient);
+      await invalidate.vehicles(queryClient, vehicle.id);
     },
     onError: (error, vehicle) =>
       toast.error(`Can't delete ${vehicle.license_plate}`, blockedDeleteDetail(error)),
@@ -189,7 +189,7 @@ export default function VehiclesView() {
                       >
                         {vehicle.vin}
                       </TableCell>
-                      <TableCell sx={{ color: '#344054' }}>
+                      <TableCell sx={{ color: colors.inkSoft }}>
                         {office ? `${office.name} · ${office.city}` : '…'}
                       </TableCell>
                       <TableCell>
@@ -240,6 +240,7 @@ export default function VehiclesView() {
             <Box display="flex" gap={1} alignItems="center">
               <Typography
                 component="label"
+                id="rows-per-page-label"
                 htmlFor="rows-per-page"
                 fontSize={13}
                 color="text.secondary"
@@ -248,6 +249,7 @@ export default function VehiclesView() {
               </Typography>
               <Select
                 id="rows-per-page"
+                labelId="rows-per-page-label"
                 size="small"
                 value={pageSize}
                 onChange={(event) =>
@@ -310,18 +312,9 @@ export default function VehiclesView() {
         title={deleting ? `Delete ${deleting.license_plate}?` : ''}
         message="This can't be undone. Vehicles with maintenance history can't be deleted; mark them inactive instead."
         isPending={remove.isPending}
-        error={null}
         onConfirm={() => deleting && remove.mutate(deleting)}
         onClose={() => setDeleting(null)}
       />
     </>
   );
 }
-
-const visuallyHidden = {
-  position: 'absolute',
-  width: 1,
-  height: 1,
-  overflow: 'hidden',
-  clip: 'rect(0 0 0 0)',
-} as const;

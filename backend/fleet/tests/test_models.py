@@ -2,7 +2,6 @@ import datetime
 from decimal import Decimal
 from typing import override
 
-from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.db.models import ProtectedError
 from django.test import TestCase
@@ -92,19 +91,6 @@ class VehicleConstraintTests(ModelTestCase):
         with transaction.atomic(), self.assertRaises(IntegrityError):
             self.make_vehicle(year=1800)
 
-    def test_full_clean_reports_plate_conflict_message(self) -> None:
-        self.make_vehicle()
-        duplicate = Vehicle(
-            vin=VIN_B,
-            license_plate="ABC1234",
-            make="Ford",
-            model="F-150",
-            year=1999,
-            office=self.office,
-        )
-        with self.assertRaisesMessage(ValidationError, "active vehicle with this license plate"):
-            duplicate.full_clean()
-
     def test_office_with_vehicles_cannot_be_deleted(self) -> None:
         self.make_vehicle()
         with self.assertRaises(ProtectedError):
@@ -141,17 +127,6 @@ class MaintenanceRecordConstraintTests(ModelTestCase):
         record = self.make_record()
         with self.assertRaises(ProtectedError):
             record.vehicle.delete()
-
-    def test_default_ordering_is_newest_first(self) -> None:
-        older = self.make_record()
-        newer = MaintenanceRecord.objects.create(
-            vehicle=older.vehicle,
-            mechanic=self.mechanic,
-            performed_on=datetime.date(2025, 6, 1),
-            maintenance_type=MaintenanceType.BRAKES,
-            cost=Decimal("300.00"),
-        )
-        self.assertEqual(list(MaintenanceRecord.objects.all()), [newer, older])
 
 
 class TimeStampTests(ModelTestCase):

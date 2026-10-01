@@ -30,13 +30,11 @@ import QueryState from '@/components/query-state';
 import { useToast } from '@/components/toast';
 import { api } from '@/lib/api';
 import { invalidate, queries } from '@/lib/queries';
-import { blockedCount } from '@/lib/blocked';
-import { errorMessage, fieldErrors } from '@/lib/errors';
-import { formatDate, formatMoney } from '@/lib/format';
+import { blockedMessage } from '@/lib/blocked';
+import { fieldErrors, generalError } from '@/lib/errors';
+import { formatDate, formatMoney, plural } from '@/lib/format';
 import type { Office, OfficeInput, OfficeSummary } from '@/lib/types';
-
-const tabular = { fontVariantNumeric: 'tabular-nums' };
-const visuallyHidden = { position: 'absolute', left: -9999 } as const;
+import { tabular, visuallyHidden } from '@/lib/sx';
 
 function windowStart(): string {
   const since = new Date();
@@ -62,12 +60,13 @@ export default function OfficesPage() {
       setDeleting(null);
       // The count comes from the API: the summary only counts active vehicles,
       // but inactive ones block the delete too.
-      const count = blockedCount(error);
       toast.error(
         `Can't delete ${office.name}`,
-        count === null
-          ? errorMessage(error)
-          : `It still has ${count} ${count === 1 ? 'vehicle' : 'vehicles'}. Move them to another office first.`,
+        blockedMessage(
+          error,
+          (count) =>
+            `It still has ${plural(count, 'vehicle')}. Move ${count === 1 ? 'it' : 'them'} to another office first.`,
+        ),
       );
     },
   });
@@ -97,7 +96,7 @@ export default function OfficesPage() {
         isEmpty={offices.length === 0}
         emptyMessage="No offices yet. Create the first one."
       >
-        <TableContainer component={Paper} variant="outlined">
+        <TableContainer component={Paper} variant="outlined" sx={{ position: 'relative' }}>
           <Table aria-label="Offices">
             <TableHead>
               <TableRow>
@@ -147,7 +146,6 @@ export default function OfficesPage() {
                       <IconButton
                         aria-label={`Delete ${office.name}`}
                         onClick={() => {
-                          remove.reset();
                           setDeleting(office);
                         }}
                       >
@@ -178,7 +176,6 @@ export default function OfficesPage() {
         title="Delete office?"
         message={`${deleting?.name ?? ''} will be removed permanently.`}
         isPending={remove.isPending}
-        error={null}
         onConfirm={() => {
           if (deleting) remove.mutate(deleting);
         }}
@@ -211,7 +208,7 @@ function OfficeDialog({
     },
   });
   const errors = fieldErrors(save.error);
-  const otherError = save.error && !errors.name && !errors.city ? errorMessage(save.error) : null;
+  const otherError = generalError(save.error);
 
   return (
     <Dialog open onClose={onClose} maxWidth="xs" fullWidth>
@@ -244,7 +241,7 @@ function OfficeDialog({
             />
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2, borderTop: 1, borderColor: 'divider' }}>
+        <DialogActions>
           <Button variant="outlined" color="inherit" onClick={onClose} sx={{ minHeight: 44 }}>
             Cancel
           </Button>

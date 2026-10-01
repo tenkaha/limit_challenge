@@ -117,7 +117,7 @@ export default function VehicleDetailPage() {
                   </Typography>
                   <Box
                     sx={{
-                      bgcolor: data.is_active ? '#ECFDF3' : colors.rowDivider,
+                      bgcolor: data.is_active ? colors.successSoft : colors.rowDivider,
                       borderRadius: 999,
                       px: 1.25,
                       py: 0.5,
@@ -283,7 +283,6 @@ export default function VehicleDetailPage() {
             : ''
         }
         isPending={remove.isPending}
-        error={null}
         onConfirm={() => deleting && remove.mutate(deleting.id)}
         onClose={() => setDeleting(null)}
       />

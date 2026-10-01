@@ -67,7 +67,7 @@ export function ToastProvider({ children }: PropsWithChildren) {
         >
           <Icon
             size={20}
-            color={toast?.kind === 'error' ? '#FDA29B' : '#6CE9A6'}
+            color={toast?.kind === 'error' ? colors.toastError : colors.toastSuccess}
             style={{ flexShrink: 0, marginTop: 1 }}
             aria-hidden
           />
@@ -76,12 +76,17 @@ export function ToastProvider({ children }: PropsWithChildren) {
               {toast?.title}
             </Typography>
             {toast?.detail ? (
-              <Typography fontSize={14} color="#D0D5DD">
+              <Typography fontSize={14} color={colors.toastMuted}>
                 {toast.detail}
               </Typography>
             ) : null}
           </Box>
-          <IconButton aria-label="Dismiss" size="small" onClick={close} sx={{ color: '#D0D5DD' }}>
+          <IconButton
+            aria-label="Dismiss"
+            size="small"
+            onClick={close}
+            sx={{ color: colors.toastMuted }}
+          >
             <X size={16} />
           </IconButton>
         </Box>

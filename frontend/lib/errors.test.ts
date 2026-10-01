@@ -1,6 +1,6 @@
 import { AxiosError, AxiosHeaders } from 'axios';
 import { describe, expect, it } from 'vitest';
-import { errorMessage, fieldErrors, isRetryable } from './errors';
+import { errorMessage, fieldErrors, generalError, isRetryable } from './errors';
 
 const apiError = (status: number, data: unknown) =>
   new AxiosError('failed', undefined, undefined, undefined, {
@@ -45,5 +45,22 @@ describe('isRetryable', () => {
     expect(isRetryable(new AxiosError('Network Error'))).toBe(true);
     expect(isRetryable(apiError(503, {}))).toBe(true);
     expect(isRetryable(apiError(400, {}))).toBe(false);
+  });
+});
+
+describe('generalError', () => {
+  it('is null when the API pointed at specific fields (they show inline)', () => {
+    expect(generalError(apiError(400, { name: ['Required.'] }))).toBeNull();
+  });
+
+  it('returns the message when no field can show it', () => {
+    expect(generalError(apiError(400, { non_field_errors: ['Pick another.'] }))).toBe(
+      'Pick another.',
+    );
+    expect(generalError(apiError(500, {}))).toBe('Request failed (500).');
+  });
+
+  it('is null when there is no error', () => {
+    expect(generalError(null)).toBeNull();
   });
 });

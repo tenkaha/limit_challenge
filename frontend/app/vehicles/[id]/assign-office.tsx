@@ -26,7 +26,7 @@ export default function AssignOffice({ vehicleId, office }: AssignOfficeProps) {
     onSuccess: async () => {
       const moved = offices.data?.results.find((option) => String(option.id) === target);
       toast.success('Vehicle moved', moved ? `Now at ${moved.name}` : undefined);
-      await invalidate.vehicles(queryClient);
+      await invalidate.vehicles(queryClient, vehicleId);
     },
     onError: (error) => toast.error("Couldn't move vehicle", errorMessage(error)),
   });

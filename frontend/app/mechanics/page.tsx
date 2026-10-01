@@ -36,13 +36,11 @@ import StatusDot from '@/components/status-dot';
 import { useToast } from '@/components/toast';
 import { api } from '@/lib/api';
 import { invalidate, queries } from '@/lib/queries';
-import { blockedCount } from '@/lib/blocked';
-import { errorMessage, fieldErrors } from '@/lib/errors';
-import { formatMoney } from '@/lib/format';
+import { blockedMessage } from '@/lib/blocked';
+import { fieldErrors, generalError } from '@/lib/errors';
+import { formatMoney, plural } from '@/lib/format';
 import type { Mechanic, MechanicInput, Page } from '@/lib/types';
-
-const tabular = { fontVariantNumeric: 'tabular-nums' };
-const visuallyHidden = { position: 'absolute', left: -9999 } as const;
+import { tabular, visuallyHidden } from '@/lib/sx';
 
 export default function MechanicsPage() {
   const toast = useToast();
@@ -122,7 +120,7 @@ function Workload({ mechanics }: { mechanics: Mechanic[] }) {
       isEmpty={rows.length === 0}
       emptyMessage="No mechanics to rank yet."
     >
-      <TableContainer component={Paper} variant="outlined">
+      <TableContainer component={Paper} variant="outlined" sx={{ position: 'relative' }}>
         <Table aria-label="Mechanic workload">
           <TableHead>
             <TableRow>
@@ -230,12 +228,13 @@ function MechanicList({
     },
     onError: (error, mechanic) => {
       setDeleting(null);
-      const count = blockedCount(error);
       onBlocked(
         mechanic.name,
-        count === null
-          ? errorMessage(error)
-          : `It has ${count} maintenance ${count === 1 ? 'record' : 'records'}. Mark them inactive instead.`,
+        blockedMessage(
+          error,
+          (count) =>
+            `It has ${plural(count, 'maintenance record')}. Mark the mechanic inactive instead.`,
+        ),
       );
     },
   });
@@ -250,7 +249,7 @@ function MechanicList({
         isEmpty={mechanics.length === 0}
         emptyMessage="No mechanics yet. Create the first one."
       >
-        <TableContainer component={Paper} variant="outlined">
+        <TableContainer component={Paper} variant="outlined" sx={{ position: 'relative' }}>
           <Table aria-label="Mechanics">
             <TableHead>
               <TableRow>
@@ -287,7 +286,6 @@ function MechanicList({
                       <IconButton
                         aria-label={`Delete ${mechanic.name}`}
                         onClick={() => {
-                          remove.reset();
                           setDeleting(mechanic);
                         }}
                       >
@@ -306,7 +304,6 @@ function MechanicList({
         title="Delete mechanic?"
         message={`${deleting?.name ?? ''} will be removed permanently.`}
         isPending={remove.isPending}
-        error={null}
         onConfirm={() => {
           if (deleting) remove.mutate(deleting);
         }}
@@ -340,10 +337,7 @@ function MechanicDialog({
     },
   });
   const errors = fieldErrors(save.error);
-  const otherError =
-    save.error && !errors.name && !errors.certification_number && !errors.is_active
-      ? errorMessage(save.error)
-      : null;
+  const otherError = generalError(save.error);
 
   return (
     <Dialog open onClose={onClose} maxWidth="xs" fullWidth>
@@ -387,7 +381,7 @@ function MechanicDialog({
             />
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2, borderTop: 1, borderColor: 'divider' }}>
+        <DialogActions>
           <Button variant="outlined" color="inherit" onClick={onClose} sx={{ minHeight: 44 }}>
             Cancel
           </Button>

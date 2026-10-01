@@ -28,6 +28,35 @@ describe('VehiclesView', () => {
     expect(searched).toContain('toyota');
   });
 
+  it('asks for a single row when it only needs the fleet total', async () => {
+    const unfiltered: (string | null)[] = [];
+    server.use(
+      http.get(`${API}/vehicles/`, ({ request }) => {
+        const params = new URL(request.url).searchParams;
+        if (!params.get('make')) unfiltered.push(params.get('page_size'));
+        return HttpResponse.json({ ...page([vehicle()]), count: params.get('make') ? 1 : 605 });
+      }),
+    );
+    setUrl('/vehicles?make=ford');
+    renderWithProviders(<VehiclesView />);
+
+    expect(await screen.findByText('1 match your filters · 605 in the fleet')).toBeInTheDocument();
+    expect(unfiltered).toEqual(['1']);
+  });
+
+  it('keeps rows per page in the URL and drops it again for the default', async () => {
+    setUrl('/vehicles?make=ford');
+    renderWithProviders(<VehiclesView />);
+
+    await userEvent.click(await screen.findByRole('combobox', { name: 'Rows per page' }));
+    await userEvent.click(await screen.findByRole('option', { name: '50' }));
+    expect(currentUrl()).toBe('/vehicles?make=ford&page_size=50');
+
+    await userEvent.click(screen.getByRole('combobox', { name: 'Rows per page' }));
+    await userEvent.click(await screen.findByRole('option', { name: '10' }));
+    expect(currentUrl()).toBe('/vehicles?make=ford');
+  });
+
   it('removes only the filter whose chip is deleted', async () => {
     setUrl('/vehicles?make=ford&model=escape');
     renderWithProviders(<VehiclesView />);
@@ -42,7 +71,10 @@ describe('VehiclesView', () => {
     server.use(
       http.delete(`${API}/vehicles/10/`, () =>
         HttpResponse.json(
-          { detail: 'Cannot delete: it is referenced by 183 maintenance records.' },
+          {
+            detail: 'Cannot delete: it is referenced by 1 maintenance record.',
+            blocked_count: 1,
+          },
           { status: 409 },
         ),
       ),
@@ -54,7 +86,9 @@ describe('VehiclesView', () => {
 
     const toast = await screen.findByRole('alert');
     expect(toast).toHaveTextContent("Can't delete FYT014");
-    expect(toast).toHaveTextContent('It has 183 maintenance records. Mark it inactive instead.');
+    expect(toast).toHaveTextContent(
+      'It has 1 maintenance record. Mark the vehicle inactive instead.',
+    );
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });
