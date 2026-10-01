@@ -95,6 +95,7 @@ class MechanicWorkloadTests(TestCase):
         expensive = make_mechanic("Expensive")
         left_this_year = make_mechanic("Left", is_active=False)
         make_mechanic("Idle")
+        make_mechanic("Al")  # same jobs and cost as Idle: name breaks the tie
         long_gone = make_mechanic("Gone", is_active=False)
         for day in (1, 2):
             make_record(vehicle, busy, datetime.date(2026, 1, day), "10.00")
@@ -104,7 +105,7 @@ class MechanicWorkloadTests(TestCase):
 
         rows = [(m.name, m.jobs_this_year) for m in selectors.mechanic_workload(year=2026)]
 
-        self.assertEqual(rows, [("Busy", 2), ("Expensive", 1), ("Left", 1), ("Idle", 0)])
+        self.assertEqual(rows, [("Busy", 2), ("Expensive", 1), ("Left", 1), ("Al", 0), ("Idle", 0)])
 
 
 class VehiclesNeedingMaintenanceTests(TestCase):
